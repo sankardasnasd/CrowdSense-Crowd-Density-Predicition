@@ -1,0 +1,445 @@
+{% extends 'admin/admin_home sub.html' %}
+{% block body %}
+
+<div style="grid-column: 1 / -1; width: 100%; max-width: 1100px; margin: 0 auto; font-family: var(--font);">
+
+    <!-- Header & Breadcrumbs -->
+    <div style="margin-bottom: 1.5rem;">
+        <div style="font-size: 0.8rem; color: var(--muted); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">
+            <a href="/myapp/admin_home/"
+               onmouseover="this.style.color='var(--indigo)'"
+               onmouseout="this.style.color='var(--muted)'"
+               style="color: var(--muted); text-decoration: none; transition: color 0.15s;">
+               Dashboard
+            </a>
+            <span>/</span>
+            <a href="{% url 'admin_manage_area' %}"
+               onmouseover="this.style.color='var(--indigo)'"
+               onmouseout="this.style.color='var(--muted)'"
+               style="color: var(--muted); text-decoration: none; transition: color 0.15s;">
+               Manage Areas
+            </a>
+            <span>/</span>
+            <span style="color: var(--ink); font-weight: 600;">Edit Area</span>
+        </div>
+
+        <h2 style="font-size: 1.35rem; font-weight: 600; letter-spacing: -0.02em; color: var(--ink); margin: 0; display: flex; align-items: center; gap: 0.65rem;">
+            <svg style="width: 22px; height: 22px; stroke: var(--indigo); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;" viewBox="0 0 24 24">
+                <path d="M12 21s7-6 7-11.5A7 7 0 005 9.5C5 15 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>
+            </svg>
+            Edit Area
+        </h2>
+        <p style="margin: 0.35rem 0 0; color: var(--muted); font-size: 0.88rem;">
+            Update location boundaries, geocoordinates, and capacity thresholds.
+        </p>
+    </div>
+
+    <!-- Django Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div style="padding: 0.75rem 1rem; border-radius: 10px; font-size: 0.84rem; font-weight: 500; margin-bottom: 1.2rem; display: flex; align-items: center; gap: 0.6rem; {% if 'error' in message.tags or 'danger' in message.tags %}background: #ffe3e3; color: #c12525; border: 1px solid rgba(193, 37, 37, 0.2);{% elif 'success' in message.tags %}background: #e1f8f2; color: #0b6b57; border: 1px solid rgba(11, 107, 87, 0.2);{% else %}background: #fff0d9; color: #a8650a; border: 1px solid rgba(168, 101, 10, 0.2);{% endif %}" role="status">
+                <svg style="width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round;" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+                </svg>
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Main Card -->
+    <div style="background: var(--card); border: 1px solid var(--line); border-radius: 18px; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03); overflow: hidden;">
+
+        <!-- Card Header with Accent Gradient -->
+        <div style="padding: 1.4rem 1.8rem; border-bottom: 1px solid var(--line); position: relative; display: flex; align-items: center; gap: 1rem;">
+            <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--indigo), var(--mag), var(--hot), var(--amber));"></div>
+            <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, var(--indigo), var(--mag)); display: grid; place-items: center; color: #fff; flex-shrink: 0; box-shadow: 0 8px 20px rgba(67, 56, 202, 0.25);">
+                <svg style="width: 20px; height: 20px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;" viewBox="0 0 24 24">
+                    <path d="M12 21s7-6 7-11.5A7 7 0 005 9.5C5 15 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>
+                </svg>
+            </div>
+            <div>
+                <h3 style="font-size: 1.12rem; color: var(--ink); font-weight: 600; margin: 0; letter-spacing: -0.02em;">
+                    Area Information
+                </h3>
+                <p style="color: var(--muted); font-size: 0.84rem; margin: 0.2rem 0 0;">
+                    Currently editing: <strong style="color: var(--ink);">{{ area.name }}</strong>
+                </p>
+            </div>
+        </div>
+
+        <form method="POST" id="editAreaForm" style="margin: 0;">
+            {% csrf_token %}
+
+            <div style="padding: 1.8rem;">
+
+                <!-- Location Search Subsection -->
+                <div style="background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 1.2rem; margin-bottom: 1.8rem;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.5rem;">
+                        <h4 style="font-size: 0.94rem; color: var(--ink); font-weight: 600; margin: 0; display: flex; align-items: center; gap: 0.45rem;">
+                            <svg style="width: 16px; height: 16px; stroke: var(--indigo); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;" viewBox="0 0 24 24">
+                                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                            </svg>
+                            Search & Relocate Area
+                        </h4>
+                        <span style="font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.15rem 0.6rem; background: #e8e9ff; color: var(--indigo);">
+                            Geocoding Auto-fill
+                        </span>
+                    </div>
+                    <p style="color: var(--muted); font-size: 0.82rem; margin: 0 0 1rem; line-height: 1.45;">
+                        Search for a new place or address to automatically refresh the geographic coordinates and administrative district.
+                    </p>
+
+                    <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 240px; display: flex; align-items: center; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 0 0.85rem;">
+                            <svg style="width: 16px; height: 16px; stroke: var(--muted); fill: none; stroke-width: 2; stroke-linecap: round; margin-right: 0.5rem;" viewBox="0 0 24 24">
+                                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                            </svg>
+                            <input
+                                type="text"
+                                id="locationQuery"
+                                placeholder="Example: Thrissur Railway Station, Kerala"
+                                autocomplete="off"
+                                style="width: 100%; border: 0; background: transparent; padding: 0.72rem 0; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none;"
+                            >
+                        </div>
+                        <button
+                            type="button"
+                            id="searchButton"
+                            onmouseover="if(!this.disabled) this.style.background='var(--indigo)'"
+                            onmouseout="if(!this.disabled) this.style.background='var(--ink)'"
+                            style="border: 0; border-radius: 10px; padding: 0.72rem 1.2rem; font-weight: 600; font-size: 0.86rem; cursor: pointer; background: var(--ink); color: #fff; display: inline-flex; align-items: center; gap: 0.5rem; transition: background 0.2s; font-family: inherit; white-space: nowrap;"
+                        >
+                            <svg style="width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round;" viewBox="0 0 24 24">
+                                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                            </svg>
+                            Search Places
+                        </button>
+                    </div>
+
+                    <div id="searchStatus" style="margin-top: 0.6rem; font-size: 0.8rem; color: var(--muted);" role="status" aria-live="polite"></div>
+                    <div id="searchResults" style="margin-top: 0.6rem; display: flex; flex-direction: column; gap: 0.4rem;"></div>
+
+                    <div id="selectedMessage" style="display: none; margin-top: 0.75rem; padding: 0.65rem 0.9rem; background: #e1f8f2; color: #0b6b57; border: 1px solid rgba(11, 107, 87, 0.2); border-radius: 9px; font-size: 0.82rem; font-weight: 500;">
+                        ✓ Location coordinates successfully updated.
+                    </div>
+                </div>
+
+                <!-- Basic Information Section -->
+                <div style="font-size: 0.85rem; font-weight: 600; color: var(--indigo); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.9rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--line);">
+                    Basic Information
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-bottom: 1.8rem;">
+                    <div>
+                        <label for="name" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                            Area Name <span style="color: var(--hot);">*</span>
+                        </label>
+                        <input type="text" id="name" name="name" value="{{ area.name }}" required
+                            style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none; box-sizing: border-box;">
+                    </div>
+
+                    <div>
+                        <label for="city" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                            City / Town <span style="color: var(--hot);">*</span>
+                        </label>
+                        <input type="text" id="city" name="city" value="{{ area.city }}" required
+                            style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none; box-sizing: border-box;">
+                    </div>
+
+                    <div>
+                        <label for="district" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                            District <span style="color: var(--hot);">*</span>
+                        </label>
+                        <input type="text" id="district" name="district" value="{{ area.district }}" required
+                            style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none; box-sizing: border-box;">
+                    </div>
+
+                    <div>
+                        <label for="state" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                            State <span style="color: var(--hot);">*</span>
+                        </label>
+                        <input type="text" id="state" name="state" value="{{ area.state }}" required
+                            style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none; box-sizing: border-box;">
+                    </div>
+
+                    <div>
+                        <label for="pincode" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                            Pincode
+                        </label>
+                        <input type="text" id="pincode" name="pincode" value="{{ area.pincode|default_if_none:'' }}" maxlength="10"
+                            style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none; box-sizing: border-box;">
+                    </div>
+                </div>
+
+                <!-- Coordinates Section -->
+                <div style="font-size: 0.85rem; font-weight: 600; color: var(--indigo); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.9rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--line);">
+                    Geographical Coordinates
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-bottom: 1.8rem;">
+                    <div>
+                        <label for="latitude" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                            Latitude <span style="color: var(--hot);">*</span>
+                        </label>
+                        <input type="number" step="any" id="latitude" name="latitude" value="{{ area.latitude|default_if_none:'' }}" placeholder="e.g. 10.5276" required
+                            style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: #eef1f8; padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none; box-sizing: border-box;">
+                        <p style="color: var(--muted); font-size: 0.75rem; margin: 0.35rem 0 0;">Decimal degrees latitude</p>
+                    </div>
+
+                    <div>
+                        <label for="longitude" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                            Longitude <span style="color: var(--hot);">*</span>
+                        </label>
+                        <input type="number" step="any" id="longitude" name="longitude" value="{{ area.longitude|default_if_none:'' }}" placeholder="e.g. 76.2144" required
+                            style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: #eef1f8; padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none; box-sizing: border-box;">
+                        <p style="color: var(--muted); font-size: 0.75rem; margin: 0.35rem 0 0;">Decimal degrees longitude</p>
+                    </div>
+                </div>
+
+                <!-- Crowd Monitoring Configuration -->
+                <div style="font-size: 0.85rem; font-weight: 600; color: var(--indigo); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.9rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--line);">
+                    Crowd Monitoring Settings
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
+                    <div>
+                        <label for="max_crowd_capacity" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                            Maximum Crowd Capacity <span style="color: var(--hot);">*</span>
+                        </label>
+                        <input type="number" id="max_crowd_capacity" name="max_crowd_capacity" min="1" value="{{ area.max_crowd_capacity }}" required
+                            style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none; box-sizing: border-box;">
+                    </div>
+
+                    <div>
+                        <label for="current_risk_level" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                            Current Risk Level <span style="color: var(--hot);">*</span>
+                        </label>
+                        <select id="current_risk_level" name="current_risk_level" required
+                            style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none; box-sizing: border-box;">
+                            <option value="Low" {% if area.current_risk_level == "Low" or area.current_risk_level == "LOW" %}selected{% endif %}>
+                                Low Risk
+                            </option>
+                            <option value="Medium" {% if area.current_risk_level == "Medium" or area.current_risk_level == "MEDIUM" %}selected{% endif %}>
+                                Medium Risk
+                            </option>
+                            <option value="High" {% if area.current_risk_level == "High" or area.current_risk_level == "HIGH" %}selected{% endif %}>
+                                High Risk
+                            </option>
+                            <option value="Critical" {% if area.current_risk_level == "Critical" or area.current_risk_level == "CRITICAL" %}selected{% endif %}>
+                                Critical Risk
+                            </option>
+                        </select>
+                    </div>
+
+                    <div style="grid-column: 1 / -1;">
+                        <label for="description" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                            Area Description
+                        </label>
+                        <textarea id="description" name="description" rows="3" placeholder="Enter key perimeter details, access gates, or monitoring units..."
+                            style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none; resize: vertical; box-sizing: border-box;">{{ area.description|default_if_none:'' }}</textarea>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Footer Action Buttons -->
+            <div style="padding: 1.2rem 1.8rem; background: var(--paper); border-top: 1px solid var(--line); display: flex; justify-content: flex-end; gap: 0.8rem; align-items: center; flex-wrap: wrap;">
+                <a href="{% url 'admin_manage_area' %}"
+                   onmouseover="this.style.borderColor='var(--ink)'; this.style.color='var(--ink)';"
+                   onmouseout="this.style.borderColor='var(--line)'; this.style.color='var(--muted)';"
+                   style="border: 1px solid var(--line); background: #fff; color: var(--muted); border-radius: 10px; padding: 0.7rem 1.2rem; font-size: 0.86rem; font-weight: 600; text-decoration: none; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.4rem;">
+                    Cancel
+                </a>
+
+                <button type="submit" id="btnSubmit"
+                    onmouseover="this.style.background='var(--indigo)'; this.style.transform='translateY(-1px)';"
+                    onmouseout="this.style.background='var(--ink)'; this.style.transform='none';"
+                    style="border: 0; border-radius: 10px; padding: 0.7rem 1.4rem; font-weight: 600; font-size: 0.88rem; cursor: pointer; background: var(--ink); color: #fff; display: inline-flex; align-items: center; gap: 0.5rem; transition: background 0.2s, transform 0.15s; font-family: inherit;">
+                    <svg style="width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.7 2.7L16 9.5"/>
+                    </svg>
+                    Update Area
+                </button>
+            </div>
+        </form>
+
+    </div>
+</div>
+
+<script>
+    const searchUrl = "{% url 'area_search_location' %}";
+
+    const queryInput = document.getElementById("locationQuery");
+    const searchButton = document.getElementById("searchButton");
+    const searchStatus = document.getElementById("searchStatus");
+    const searchResults = document.getElementById("searchResults");
+    const selectedMessage = document.getElementById("selectedMessage");
+
+    const fields = {
+        name: document.getElementById("name"),
+        city: document.getElementById("city"),
+        district: document.getElementById("district"),
+        state: document.getElementById("state"),
+        pincode: document.getElementById("pincode"),
+        latitude: document.getElementById("latitude"),
+        longitude: document.getElementById("longitude")
+    };
+
+    let selectedLocation = true;
+
+    async function searchLocations() {
+        const query = queryInput.value.trim();
+
+        if (!query) {
+            searchStatus.textContent = "Please enter a location to search.";
+            searchStatus.style.color = "var(--hot)";
+            return;
+        }
+
+        searchButton.disabled = true;
+        searchButton.style.opacity = "0.6";
+        searchStatus.textContent = "Searching for locations...";
+        searchStatus.style.color = "var(--muted)";
+        searchResults.replaceChildren();
+        selectedMessage.style.display = "none";
+        selectedLocation = false;
+
+        try {
+            const url = new URL(searchUrl, window.location.origin);
+            url.searchParams.set("q", query);
+
+            const response = await fetch(url.toString(), {
+                method: "GET",
+                headers: {
+                    "Accept": "application/json",
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error("Location search failed.");
+            }
+
+            const data = await response.json();
+
+            if (!data.results || data.results.length === 0) {
+                searchStatus.textContent = "No locations found. Try another place name.";
+                searchStatus.style.color = "var(--amber)";
+                return;
+            }
+
+            searchStatus.textContent = "Select matching location:";
+            searchStatus.style.color = "var(--ink)";
+
+            data.results.forEach(function (place) {
+                const button = document.createElement("button");
+                button.type = "button";
+
+                // Applied inline styles matching the theme
+                button.style.width = "100%";
+                button.style.textAlign = "left";
+                button.style.padding = "0.7rem 0.95rem";
+                button.style.background = "#fff";
+                button.style.color = "var(--ink)";
+                button.style.border = "1px solid var(--line)";
+                button.style.borderRadius = "9px";
+                button.style.fontSize = "0.84rem";
+                button.style.cursor = "pointer";
+                button.style.fontFamily = "inherit";
+                button.style.transition = "background 0.15s, border-color 0.15s";
+
+                const title = document.createElement("strong");
+                title.style.display = "block";
+                title.style.fontSize = "0.86rem";
+                title.style.marginBottom = "0.15rem";
+                title.textContent = place.name || place.formatted || "Location";
+
+                const address = document.createElement("span");
+                address.style.color = "var(--muted)";
+                address.style.fontSize = "0.78rem";
+                address.textContent = place.formatted || "";
+
+                button.appendChild(title);
+                button.appendChild(address);
+
+                button.onmouseover = function() {
+                    this.style.background = "var(--paper)";
+                    this.style.borderColor = "var(--indigo)";
+                };
+                button.onmouseout = function() {
+                    this.style.background = "#fff";
+                    this.style.borderColor = "var(--line)";
+                };
+
+                button.addEventListener("click", function () {
+                    selectLocation(place);
+                });
+
+                searchResults.appendChild(button);
+            });
+
+        } catch (error) {
+            searchStatus.textContent = "Unable to search locations. Please try again.";
+            searchStatus.style.color = "var(--hot)";
+            console.error(error);
+        } finally {
+            searchButton.disabled = false;
+            searchButton.style.opacity = "1";
+        }
+    }
+
+    function selectLocation(place) {
+        fields.name.value = place.name || "";
+        fields.city.value = place.city || "";
+        fields.district.value = place.district || "";
+        fields.state.value = place.state || "";
+        fields.pincode.value = place.pincode || "";
+        fields.latitude.value = place.latitude ?? "";
+        fields.longitude.value = place.longitude ?? "";
+
+        selectedLocation = true;
+
+        searchStatus.textContent = "";
+        searchResults.replaceChildren();
+        selectedMessage.style.display = "block";
+    }
+
+    searchButton.addEventListener("click", searchLocations);
+
+    queryInput.addEventListener("keydown", function (event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            searchLocations();
+        }
+    });
+
+    document.getElementById("editAreaForm").addEventListener("submit", function (event) {
+        const latitude = fields.latitude.value.trim();
+        const longitude = fields.longitude.value.trim();
+
+        if (!latitude || !longitude) {
+            event.preventDefault();
+            alert("Please enter or select valid latitude and longitude coordinates.");
+            return;
+        }
+
+        if (!Number.isFinite(Number(latitude)) || !Number.isFinite(Number(longitude))) {
+            event.preventDefault();
+            alert("Latitude and longitude must be valid numerical values.");
+            return;
+        }
+
+        if (!selectedLocation) {
+            event.preventDefault();
+            alert("Please select a location from the search results or confirm existing coordinates.");
+            return;
+        }
+
+        const b = document.getElementById("btnSubmit");
+        b.disabled = true;
+        b.style.opacity = "0.7";
+        b.textContent = "Updating...";
+    });
+</script>
+
+{% endblock %}

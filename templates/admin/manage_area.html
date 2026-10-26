@@ -1,0 +1,458 @@
+{% extends 'admin/admin_home sub.html' %}
+{% block body %}
+
+<div style="grid-column: 1 / -1; width: 100%; max-width: 1200px; margin: 0 auto; font-family: var(--font);">
+
+    <!-- Page Header -->
+    <div style="margin-bottom: 1.5rem;">
+        <h2 style="font-size: 1.35rem; font-weight: 600; letter-spacing: -0.02em; color: var(--ink); margin: 0; display: flex; align-items: center; gap: 0.65rem;">
+            <svg style="width: 22px; height: 22px; stroke: var(--indigo); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;" viewBox="0 0 24 24">
+                <path d="M12 21s7-6 7-11.5A7 7 0 005 9.5C5 15 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>
+            </svg>
+            Area Management
+        </h2>
+        <p style="margin: 0.35rem 0 0; color: var(--muted); font-size: 0.88rem;">
+            Register monitored zones, geolocate coordinates, and configure capacity thresholds.
+        </p>
+    </div>
+
+    <!-- Django Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div style="padding: 0.75rem 1rem; border-radius: 10px; font-size: 0.84rem; font-weight: 500; margin-bottom: 1.2rem; display: flex; align-items: center; gap: 0.6rem; {% if 'error' in message.tags or 'danger' in message.tags %}background: #ffe3e3; color: #c12525; border: 1px solid rgba(193, 37, 37, 0.2);{% elif 'success' in message.tags %}background: #e1f8f2; color: #0b6b57; border: 1px solid rgba(11, 107, 87, 0.2);{% else %}background: #fff0d9; color: #a8650a; border: 1px solid rgba(168, 101, 10, 0.2);{% endif %}" role="status">
+                <svg style="width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round;" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+                </svg>
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- ADD AREA PANEL -->
+    <section style="background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 1.6rem 1.8rem; margin-bottom: 1.5rem; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem;">
+            <h3 style="font-size: 1.12rem; color: var(--ink); font-weight: 600; margin: 0; letter-spacing: -0.02em;">
+                Add New Area
+            </h3>
+            <span style="font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.2rem 0.65rem; background: #e8e9ff; color: var(--indigo);">
+                Geocoding Enabled
+            </span>
+        </div>
+        <p style="color: var(--muted); font-size: 0.84rem; margin: 0 0 1.25rem;">
+            Search for a location to automatically fetch district, state, and geographic coordinates.
+        </p>
+
+        <!-- Search Bar -->
+        <div style="background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 1.1rem; margin-bottom: 1.4rem;">
+            <label for="place_query" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                Search Place Name
+            </label>
+            <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 240px; display: flex; align-items: center; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 0 0.8rem;">
+                    <svg style="width: 16px; height: 16px; stroke: var(--muted); fill: none; stroke-width: 2; stroke-linecap: round; margin-right: 0.5rem;" viewBox="0 0 24 24">
+                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    <input
+                        type="text"
+                        id="place_query"
+                        placeholder="Example: Thrissur Round, Kerala"
+                        autocomplete="off"
+                        style="width: 100%; border: 0; background: transparent; padding: 0.7rem 0; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none;"
+                    >
+                </div>
+                <button
+                    type="button"
+                    id="search_places"
+                    onmouseover="if(!this.disabled) this.style.background='var(--indigo)'"
+                    onmouseout="if(!this.disabled) this.style.background='var(--ink)'"
+                    style="border: 0; border-radius: 10px; padding: 0.7rem 1.2rem; font-weight: 600; font-size: 0.86rem; cursor: pointer; background: var(--ink); color: #fff; display: inline-flex; align-items: center; gap: 0.5rem; transition: background 0.2s; font-family: inherit;"
+                >
+                    <svg style="width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round;" viewBox="0 0 24 24">
+                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    Search Places
+                </button>
+            </div>
+
+            <div id="search_status" style="margin-top: 0.6rem; font-size: 0.8rem; color: var(--muted);" role="status" aria-live="polite"></div>
+            <div id="suggestions" style="margin-top: 0.6rem; display: flex; flex-direction: column; gap: 0.4rem;"></div>
+        </div>
+
+        <!-- Area Form -->
+        <form method="POST" id="area_form">
+            {% csrf_token %}
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
+
+                <div>
+                    <label for="name" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                        Place Name *
+                    </label>
+                    <input type="text" name="name" id="name" maxlength="255" required
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none; box-sizing: border-box;">
+                </div>
+
+                <div>
+                    <label for="city" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                        City / Town
+                    </label>
+                    <input type="text" name="city" id="city"
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none; box-sizing: border-box;">
+                </div>
+
+                <div>
+                    <label for="district" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                        District
+                    </label>
+                    <input type="text" name="district" id="district"
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none; box-sizing: border-box;">
+                </div>
+
+                <div>
+                    <label for="state" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                        State
+                    </label>
+                    <input type="text" name="state" id="state"
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none; box-sizing: border-box;">
+                </div>
+
+                <div>
+                    <label for="pincode" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                        Pincode
+                    </label>
+                    <input type="text" name="pincode" id="pincode" maxlength="12"
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none; box-sizing: border-box;">
+                </div>
+
+                <div>
+                    <label for="max_crowd_capacity" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                        Maximum Crowd Capacity *
+                    </label>
+                    <input type="number" name="max_crowd_capacity" id="max_crowd_capacity" min="1" required
+                        placeholder="e.g. 5000"
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none; box-sizing: border-box;">
+                </div>
+
+                <div>
+                    <label for="latitude" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                        Latitude * <span style="font-weight: 400; color: var(--muted); font-size: 0.76rem;">(Auto-filled)</span>
+                    </label>
+                    <input type="text" name="latitude" id="latitude" readonly required
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: #eef1f8; color: var(--muted); padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; outline: none; cursor: not-allowed; box-sizing: border-box;">
+                </div>
+
+                <div>
+                    <label for="longitude" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                        Longitude * <span style="font-weight: 400; color: var(--muted); font-size: 0.76rem;">(Auto-filled)</span>
+                    </label>
+                    <input type="text" name="longitude" id="longitude" readonly required
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: #eef1f8; color: var(--muted); padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; outline: none; cursor: not-allowed; box-sizing: border-box;">
+                </div>
+
+                <div style="grid-column: 1 / -1;">
+                    <label for="current_risk_level" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                        Current Risk Level
+                    </label>
+                    <select name="current_risk_level" id="current_risk_level"
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none; box-sizing: border-box;">
+                        <option value="LOW">Low (Normal crowd flux)</option>
+                        <option value="MEDIUM">Medium (Elevated footfall)</option>
+                        <option value="HIGH">High (Capacity warning threshold)</option>
+                    </select>
+                </div>
+
+                <div style="grid-column: 1 / -1;">
+                    <label for="description" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                        Description
+                    </label>
+                    <textarea name="description" id="description" rows="3" placeholder="Enter key landmarks, entry/exit gates, or department jurisdiction notes"
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none; resize: vertical; box-sizing: border-box;"></textarea>
+                </div>
+
+                <div style="grid-column: 1 / -1; margin-top: 0.5rem;">
+                    <button type="submit"
+                        onmouseover="this.style.background='var(--indigo)'; this.style.transform='translateY(-1px)';"
+                        onmouseout="this.style.background='var(--ink)'; this.style.transform='none';"
+                        style="width: 100%; border: 0; border-radius: 10px; padding: 0.8rem 1.2rem; font-weight: 600; font-size: 0.9rem; cursor: pointer; background: var(--ink); color: #fff; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; transition: background 0.2s, transform 0.15s; font-family: inherit;">
+                        <svg style="width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round;" viewBox="0 0 24 24">
+                            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                        </svg>
+                        Add Area
+                    </button>
+                </div>
+
+            </div>
+        </form>
+    </section>
+
+    <!-- VIEW AREAS PANEL -->
+    <section style="background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 1.6rem 1.8rem; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.2rem; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <h3 style="font-size: 1.12rem; color: var(--ink); font-weight: 600; margin: 0; letter-spacing: -0.02em;">
+                    Monitored Areas
+                </h3>
+                <p style="color: var(--muted); font-size: 0.84rem; margin: 0.2rem 0 0;">
+                    Overview of all registered physical monitoring sectors.
+                </p>
+            </div>
+
+            <!-- Filter Search -->
+            <form method="GET" style="display: flex; gap: 0.5rem; align-items: center; margin: 0;">
+                <div style="display: flex; align-items: center; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 0 0.75rem;">
+                    <svg style="width: 15px; height: 15px; stroke: var(--muted); fill: none; stroke-width: 2; stroke-linecap: round; margin-right: 0.4rem;" viewBox="0 0 24 24">
+                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    <input
+                        type="text"
+                        name="search"
+                        placeholder="Filter areas..."
+                        value="{{ search_query }}"
+                        style="border: 0; background: transparent; padding: 0.55rem 0; font-family: inherit; font-size: 0.84rem; color: var(--ink); outline: none; width: 170px;"
+                    >
+                </div>
+                <button type="submit"
+                    onmouseover="this.style.background='var(--indigo)'"
+                    onmouseout="this.style.background='var(--ink)'"
+                    style="border: 0; border-radius: 10px; padding: 0.55rem 0.9rem; font-weight: 600; font-size: 0.82rem; cursor: pointer; background: var(--ink); color: #fff; transition: background 0.2s; font-family: inherit;">
+                    Filter
+                </button>
+                {% if search_query %}
+                    <a href="{% url 'admin_manage_area' %}"
+                       onmouseover="this.style.borderColor='var(--ink)'"
+                       onmouseout="this.style.borderColor='var(--line)'"
+                       style="border: 1px solid var(--line); background: #fff; color: var(--muted); border-radius: 10px; padding: 0.5rem 0.85rem; font-size: 0.82rem; font-weight: 600; text-decoration: none; transition: border-color 0.2s;">
+                        Clear
+                    </a>
+                {% endif %}
+            </form>
+        </div>
+
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.86rem;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--line);">
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Name</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">City</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">District</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">State</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Pincode</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Coordinates</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Capacity</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Risk Level</th>
+                        <th style="text-align: right; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                {% for area in areas %}
+                    <tr onmouseover="this.style.background='#f8f9fd'" onmouseout="this.style.background='transparent'" style="border-bottom: 1px solid var(--line); transition: background 0.15s;">
+                        <td style="padding: 0.8rem 0.75rem; font-weight: 600; color: var(--ink);">{{ area.name }}</td>
+                        <td style="padding: 0.8rem 0.75rem; color: var(--muted);">{{ area.city|default:"-" }}</td>
+                        <td style="padding: 0.8rem 0.75rem; color: var(--muted);">{{ area.district|default:"-" }}</td>
+                        <td style="padding: 0.8rem 0.75rem; color: var(--muted);">{{ area.state|default:"-" }}</td>
+                        <td style="padding: 0.8rem 0.75rem; color: var(--muted); font-feature-settings: 'tnum';">{{ area.pincode|default:"-" }}</td>
+                        <td style="padding: 0.8rem 0.75rem; color: var(--muted); font-feature-settings: 'tnum'; font-size: 0.8rem;">
+                            {{ area.latitude|floatformat:4 }}, {{ area.longitude|floatformat:4 }}
+                        </td>
+                        <td style="padding: 0.8rem 0.75rem; font-weight: 600; font-feature-settings: 'tnum';">
+                            {{ area.max_crowd_capacity }}
+                        </td>
+                        <td style="padding: 0.8rem 0.75rem;">
+                            {% if area.current_risk_level == 'HIGH' %}
+                                <span style="display: inline-block; font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.2rem 0.65rem; background: #ffe3e3; color: #c12525;">High</span>
+                            {% elif area.current_risk_level == 'MEDIUM' %}
+                                <span style="display: inline-block; font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.2rem 0.65rem; background: #fff0d9; color: #a8650a;">Medium</span>
+                            {% else %}
+                                <span style="display: inline-block; font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.2rem 0.65rem; background: #dff7f0; color: #0b6b57;">Low</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 0.8rem 0.75rem; text-align: right; white-space: nowrap;">
+                            <a href="/myapp/admin_edit_area/{{ area.id }}/"
+                               onmouseover="this.style.background='var(--paper)'; this.style.borderColor='var(--ink)';"
+                               onmouseout="this.style.background='#fff'; this.style.borderColor='var(--line)';"
+                               style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.78rem; font-weight: 600; padding: 0.35rem 0.65rem; border-radius: 8px; border: 1px solid var(--line); background: #fff; color: var(--ink); text-decoration: none; margin-right: 0.3rem; transition: all 0.15s;">
+                                Edit
+                            </a>
+                            <a href="/myapp/admin_delete_area/{{ area.id }}/"
+                               onclick="return confirm('Are you sure you want to delete this area?');"
+                               onmouseover="this.style.background='var(--hot)'; this.style.color='#fff';"
+                               onmouseout="this.style.background='#ffecec'; this.style.color='#b42323';"
+                               style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.78rem; font-weight: 600; padding: 0.35rem 0.65rem; border-radius: 8px; background: #ffecec; color: #b42323; text-decoration: none; transition: all 0.15s;">
+                                Delete
+                            </a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="9" style="text-align: center; padding: 2.5rem 1rem; color: var(--muted); font-size: 0.88rem;">
+                            No areas registered yet. Use the form above to add your first sector.
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+</div>
+
+<script>
+    const searchUrl = "{% url 'area_search_location' %}";
+
+    const queryInput = document.getElementById("place_query");
+    const searchButton = document.getElementById("search_places");
+    const suggestionsBox = document.getElementById("suggestions");
+    const statusBox = document.getElementById("search_status");
+    const areaForm = document.getElementById("area_form");
+
+    let searchInProgress = false;
+    let selectedLocation = false;
+
+    // Reset coordinates if place query modified
+    queryInput.addEventListener("input", function () {
+        selectedLocation = false;
+        document.getElementById("latitude").value = "";
+        document.getElementById("longitude").value = "";
+        suggestionsBox.replaceChildren();
+        statusBox.textContent = "";
+    });
+
+    // Search places
+    async function searchPlaces() {
+        const query = queryInput.value.trim();
+
+        if (searchInProgress) return;
+        suggestionsBox.replaceChildren();
+
+        if (query.length < 3) {
+            statusBox.textContent = "Please enter at least 3 characters.";
+            statusBox.style.color = "var(--hot)";
+            return;
+        }
+
+        searchInProgress = true;
+        searchButton.disabled = true;
+        searchButton.style.opacity = "0.6";
+        statusBox.textContent = "Searching locations...";
+        statusBox.style.color = "var(--muted)";
+
+        try {
+            const url = new URL(searchUrl, window.location.origin);
+            url.searchParams.set("q", query);
+
+            const response = await fetch(url.toString(), {
+                method: "GET",
+                headers: { "Accept": "application/json" }
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || "Location search failed.");
+            }
+
+            if (!data.results || data.results.length === 0) {
+                statusBox.textContent = "No places found. Try another search.";
+                statusBox.style.color = "var(--amber)";
+                return;
+            }
+
+            statusBox.textContent = "Select matching location:";
+            statusBox.style.color = "var(--ink)";
+
+            data.results.forEach(function (place) {
+                const button = document.createElement("button");
+                button.type = "button";
+                button.textContent = place.formatted || place.name || "Unknown place";
+
+                // Applied inline styles matching the theme's selection items
+                button.style.width = "100%";
+                button.style.textAlign = "left";
+                button.style.padding = "0.65rem 0.9rem";
+                button.style.background = "#fff";
+                button.style.color = "var(--ink)";
+                button.style.border = "1px solid var(--line)";
+                button.style.borderRadius = "9px";
+                button.style.fontSize = "0.84rem";
+                button.style.cursor = "pointer";
+                button.style.fontFamily = "inherit";
+                button.style.transition = "background 0.15s, border-color 0.15s";
+
+                button.onmouseover = function() {
+                    this.style.background = "var(--paper)";
+                    this.style.borderColor = "var(--indigo)";
+                };
+                button.onmouseout = function() {
+                    this.style.background = "#fff";
+                    this.style.borderColor = "var(--line)";
+                };
+
+                button.addEventListener("click", function () {
+                    selectPlace(place);
+                });
+
+                suggestionsBox.appendChild(button);
+            });
+
+        } catch (error) {
+            statusBox.textContent = error.message || "Unable to search. Please try again.";
+            statusBox.style.color = "var(--hot)";
+        } finally {
+            searchInProgress = false;
+            searchButton.disabled = false;
+            searchButton.style.opacity = "1";
+        }
+    }
+
+    // Populate selected location details
+    function selectPlace(place) {
+        document.getElementById("name").value = place.name || "";
+        document.getElementById("city").value = place.city || "";
+        document.getElementById("district").value = place.district || "";
+        document.getElementById("state").value = place.state || "";
+        document.getElementById("pincode").value = place.pincode || "";
+        document.getElementById("latitude").value = place.latitude ?? "";
+        document.getElementById("longitude").value = place.longitude ?? "";
+
+        selectedLocation =
+            place.latitude !== "" &&
+            place.latitude !== null &&
+            place.latitude !== undefined &&
+            place.longitude !== "" &&
+            place.longitude !== null &&
+            place.longitude !== undefined;
+
+        queryInput.value = place.formatted || place.name || "";
+        suggestionsBox.replaceChildren();
+
+        if (selectedLocation) {
+            statusBox.textContent = "Location coordinates locked in.";
+            statusBox.style.color = "var(--calm)";
+        } else {
+            statusBox.textContent = "Coordinates unavailable for this selection. Try another.";
+            statusBox.style.color = "var(--hot)";
+        }
+    }
+
+    searchButton.addEventListener("click", searchPlaces);
+
+    queryInput.addEventListener("keydown", function (event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            searchPlaces();
+        }
+    });
+
+    areaForm.addEventListener("submit", function (event) {
+        const latitude = document.getElementById("latitude").value;
+        const longitude = document.getElementById("longitude").value;
+
+        if (!selectedLocation || latitude === "" || longitude === "") {
+            event.preventDefault();
+            alert("Please search and select a verified location before adding the area.");
+        }
+    });
+</script>
+
+{% endblock %}

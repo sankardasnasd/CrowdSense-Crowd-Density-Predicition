@@ -1,0 +1,393 @@
+{% extends 'admin/admin_home sub.html' %}
+{% block body %}
+
+<div style="grid-column: 1 / -1; width: 100%; max-width: 1400px; margin: 0 auto; font-family: var(--font);">
+
+    <!-- Header Section -->
+    <div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <div style="font-size: 0.8rem; color: var(--muted); margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.4rem;">
+                <a href="/myapp/admin_home/" style="color: var(--muted); text-decoration: none;">Dashboard</a>
+                <span>/</span>
+                <span style="color: var(--ink); font-weight: 600;">Control Room</span>
+                <span>/</span>
+                <span style="color: var(--ink); font-weight: 600;">Emergency Alerts</span>
+            </div>
+            <h2 style="font-size: 1.35rem; font-weight: 600; letter-spacing: -0.02em; color: var(--ink); margin: 0; display: flex; align-items: center; gap: 0.65rem;">
+                <svg style="width: 22px; height: 22px; stroke: var(--hot); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;" viewBox="0 0 24 24">
+                    <path d="M6 16V11a6 6 0 0112 0v5l2 2H4z"/><path d="M10 21h4"/>
+                </svg>
+                Emergency Dispatch Alerts
+            </h2>
+            <p style="margin: 0.35rem 0 0; color: var(--muted); font-size: 0.88rem;">
+                Live incident monitoring, public advisory broadcasts, and department response coordination.
+            </p>
+        </div>
+
+        <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
+            <div style="background: #fff; border: 1px solid var(--line); border-radius: 50px; padding: 0.45rem 1rem; font-size: 0.82rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
+                <i style="width: 7px; height: 7px; border-radius: 50%; background: var(--hot); animation: blink 1.6s infinite; display: inline-block;"></i>
+                <span style="color: var(--muted);">Active Critical Threats:</span>
+                <span style="color: var(--hot); font-feature-settings: 'tnum'; font-weight: 700;">{{ active_critical }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Django Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div style="padding: 0.75rem 1rem; border-radius: 10px; font-size: 0.84rem; font-weight: 500; margin-bottom: 1.2rem; display: flex; align-items: center; gap: 0.6rem; {% if 'error' in message.tags or 'danger' in message.tags %}background: #ffe3e3; color: #c12525; border: 1px solid rgba(193, 37, 37, 0.2);{% elif 'success' in message.tags %}background: #e1f8f2; color: #0b6b57; border: 1px solid rgba(11, 107, 87, 0.2);{% else %}background: #fff0d9; color: #a8650a; border: 1px solid rgba(168, 101, 10, 0.2);{% endif %}" role="status">
+                <svg style="width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round;" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+                </svg>
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- 4 KPI Summary Cards -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+        
+        <div style="background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 1.2rem; position: relative; overflow: hidden;">
+            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--hot);"></div>
+            <div style="font-size: 0.78rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Active Incidents</div>
+            <div style="font-size: 1.85rem; font-weight: 700; color: var(--hot); margin: 0.3rem 0 0.1rem; font-feature-settings: 'tnum';">
+                {{ active_count }}
+            </div>
+            <div style="font-size: 0.76rem; color: var(--muted);">Requiring urgent field response</div>
+        </div>
+
+        <div style="background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 1.2rem; position: relative; overflow: hidden;">
+            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--amber);"></div>
+            <div style="font-size: 0.78rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Under Control</div>
+            <div style="font-size: 1.85rem; font-weight: 700; color: var(--amber); margin: 0.3rem 0 0.1rem; font-feature-settings: 'tnum';">
+                {{ under_control_count }}
+            </div>
+            <div style="font-size: 0.76rem; color: var(--muted);">Units dispatched on-site</div>
+        </div>
+
+        <div style="background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 1.2rem; position: relative; overflow: hidden;">
+            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--calm);"></div>
+            <div style="font-size: 0.78rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Resolved Situations</div>
+            <div style="font-size: 1.85rem; font-weight: 700; color: var(--calm); margin: 0.3rem 0 0.1rem; font-feature-settings: 'tnum';">
+                {{ resolved_count }}
+            </div>
+            <div style="font-size: 0.76rem; color: var(--muted);">Dissipated & closed</div>
+        </div>
+
+        <div style="background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 1.2rem; position: relative; overflow: hidden;">
+            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--indigo);"></div>
+            <div style="font-size: 0.78rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Total Incidents Logged</div>
+            <div style="font-size: 1.85rem; font-weight: 700; color: var(--ink); margin: 0.3rem 0 0.1rem; font-feature-settings: 'tnum';">
+                {{ total_alerts }}
+            </div>
+            <div style="font-size: 0.76rem; color: var(--muted);">Lifetime alert broadcasts</div>
+        </div>
+
+    </div>
+
+    <!-- Main Table & Filter Card -->
+    <section style="background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 1.6rem 1.8rem; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+        
+        <!-- Filter Bar -->
+        <form method="GET" style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; margin-bottom: 1.4rem; padding-bottom: 1.2rem; border-bottom: 1px solid var(--line);">
+            
+            <div style="min-width: 170px;">
+                <label style="display: block; font-size: 0.74rem; font-weight: 600; color: var(--muted); margin-bottom: 0.25rem;">Severity Level</label>
+                <select name="severity" style="width: 100%; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); padding: 0.55rem 0.75rem; font-family: inherit; font-size: 0.84rem; color: var(--ink); outline: none;">
+                    <option value="">All Severities</option>
+                    {% for code, label in severity_choices %}
+                        <option value="{{ code }}" {% if severity_filter == code %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="min-width: 150px;">
+                <label style="display: block; font-size: 0.74rem; font-weight: 600; color: var(--muted); margin-bottom: 0.25rem;">Incident Status</label>
+                <select name="status" style="width: 100%; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); padding: 0.55rem 0.75rem; font-family: inherit; font-size: 0.84rem; color: var(--ink); outline: none;">
+                    <option value="">All Statuses</option>
+                    {% for code, label in status_choices %}
+                        <option value="{{ code }}" {% if status_filter == code %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="min-width: 170px;">
+                <label style="display: block; font-size: 0.74rem; font-weight: 600; color: var(--muted); margin-bottom: 0.25rem;">Affected Area</label>
+                <select name="area" style="width: 100%; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); padding: 0.55rem 0.75rem; font-family: inherit; font-size: 0.84rem; color: var(--ink); outline: none;">
+                    <option value="">All Monitored Areas</option>
+                    {% for a in areas %}
+                        <option value="{{ a.id }}" {% if area_filter == a.id|stringformat:"s" %}selected{% endif %}>{{ a.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="min-width: 170px;">
+                <label style="display: block; font-size: 0.74rem; font-weight: 600; color: var(--muted); margin-bottom: 0.25rem;">Emergency Department</label>
+                <select name="dept" style="width: 100%; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); padding: 0.55rem 0.75rem; font-family: inherit; font-size: 0.84rem; color: var(--ink); outline: none;">
+                    <option value="">All Responding Units</option>
+                    {% for d in departments %}
+                        <option value="{{ d.id }}" {% if dept_filter == d.id|stringformat:"s" %}selected{% endif %}>{{ d.department_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="min-width: 130px;">
+                <label style="display: block; font-size: 0.74rem; font-weight: 600; color: var(--muted); margin-bottom: 0.25rem;">Date From</label>
+                <input type="date" name="date_from" value="{{ date_from }}"
+                    style="width: 100%; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); padding: 0.5rem 0.65rem; font-family: inherit; font-size: 0.82rem; color: var(--ink); outline: none; box-sizing: border-box;">
+            </div>
+
+            <div style="min-width: 130px;">
+                <label style="display: block; font-size: 0.74rem; font-weight: 600; color: var(--muted); margin-bottom: 0.25rem;">Date To</label>
+                <input type="date" name="date_to" value="{{ date_to }}"
+                    style="width: 100%; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); padding: 0.5rem 0.65rem; font-family: inherit; font-size: 0.82rem; color: var(--ink); outline: none; box-sizing: border-box;">
+            </div>
+
+            <div style="margin-top: 1.15rem; display: flex; gap: 0.4rem;">
+                <button type="submit"
+                    onmouseover="this.style.background='var(--indigo)'"
+                    onmouseout="this.style.background='var(--ink)'"
+                    style="border: 0; border-radius: 9px; padding: 0.55rem 1rem; font-weight: 600; font-size: 0.82rem; cursor: pointer; background: var(--ink); color: #fff; transition: background 0.2s; font-family: inherit;">
+                    Filter
+                </button>
+
+                {% if severity_filter or status_filter or area_filter or dept_filter or date_from or date_to %}
+                    <a href="{% url 'view_alerts' %}"
+                       onmouseover="this.style.borderColor='var(--ink)'"
+                       onmouseout="this.style.borderColor='var(--line)'"
+                       style="border: 1px solid var(--line); background: #fff; color: var(--muted); border-radius: 9px; padding: 0.5rem 0.85rem; font-size: 0.82rem; font-weight: 600; text-decoration: none; transition: border-color 0.2s;">
+                        Reset
+                    </a>
+                {% endif %}
+            </div>
+
+        </form>
+
+        <!-- Alerts Table -->
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.86rem;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--line);">
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Broadcast Time</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Severity & Title</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Sector & Department</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Trigger Source</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Status</th>
+                        <th style="text-align: right; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Control Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for a in alerts %}
+                    <tr onmouseover="this.style.background='#f8f9fd'" onmouseout="this.style.background='transparent'" style="border-bottom: 1px solid var(--line); transition: background 0.15s;">
+                        
+                        <!-- Timestamp -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle; white-space: nowrap;">
+                            <div style="font-weight: 600; color: var(--ink); font-feature-settings: 'tnum'; font-size: 0.84rem;">
+                                {{ a.created_at|date:"H:i:s" }}
+                            </div>
+                            <div style="font-size: 0.76rem; color: var(--muted);">
+                                {{ a.created_at|date:"M d, Y" }}
+                            </div>
+                        </td>
+
+                        <!-- Severity & Title -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                            <div style="margin-bottom: 0.25rem;">
+                                {% if a.severity == 'CRITICAL' %}
+                                    <span style="display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.7rem; font-weight: 700; border-radius: 50px; padding: 0.15rem 0.55rem; background: #ffe3e3; color: #c12525; box-shadow: 0 0 0 1px rgba(255, 77, 77, 0.25);">
+                                        <i style="width: 5px; height: 5px; border-radius: 50%; background: var(--hot); display: inline-block;"></i> Critical Red Alert
+                                    </span>
+                                {% elif a.severity == 'HIGH' %}
+                                    <span style="display: inline-block; font-size: 0.7rem; font-weight: 700; border-radius: 50px; padding: 0.15rem 0.55rem; background: #fff0d9; color: #a8650a;">
+                                        High Emergency
+                                    </span>
+                                {% else %}
+                                    <span style="display: inline-block; font-size: 0.7rem; font-weight: 700; border-radius: 50px; padding: 0.15rem 0.55rem; background: #e8e9ff; color: #3a33b0;">
+                                        Medium Attention
+                                    </span>
+                                {% endif %}
+                            </div>
+                            <div style="font-weight: 600; color: var(--ink); font-size: 0.9rem;">
+                                {{ a.title }}
+                            </div>
+                            <div style="font-size: 0.78rem; color: var(--muted); margin-top: 0.15rem; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                {{ a.description }}
+                            </div>
+                        </td>
+
+                        <!-- Sector & Emergency Unit -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                            <div>
+                                <span style="display: inline-block; font-size: 0.72rem; font-weight: 600; background: #e8e9ff; color: var(--indigo); border-radius: 50px; padding: 0.1rem 0.5rem; margin-bottom: 0.25rem;">
+                                    {{ a.area.name }}
+                                </span>
+                            </div>
+                            {% if a.emergency_department %}
+                                <div style="font-size: 0.8rem; font-weight: 600; color: var(--ink);">
+                                    🛡 {{ a.emergency_department.department_name }}
+                                </div>
+                            {% else %}
+                                <span style="color: var(--muted); font-size: 0.76rem;">No Unit Dispatched</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Trigger Origin -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                            {% if a.anomaly_log %}
+                                <div style="font-size: 0.78rem; font-weight: 600; color: var(--hot);">
+                                    ⚠️ Anomaly: {{ a.anomaly_log.get_anomaly_type_display|truncatechars:24 }}
+                                </div>
+                                <div style="font-size: 0.74rem; color: var(--muted);">
+                                    Cam: {{ a.anomaly_log.camera.camera_identifier }} (Score: {{ a.anomaly_log.confidence_score|floatformat:2 }})
+                                </div>
+                            {% elif a.density_log %}
+                                <div style="font-size: 0.78rem; font-weight: 600; color: var(--amber);">
+                                    👥 Headcount: {{ a.density_log.estimated_crowd_count }} persons
+                                </div>
+                                <div style="font-size: 0.74rem; color: var(--muted);">
+                                    Cam: {{ a.density_log.camera.camera_identifier }}
+                                </div>
+                            {% else %}
+                                <span style="color: var(--muted); font-size: 0.78rem;">Manual Broadcast</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Status Badge -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                            {% if a.status == 'ACTIVE' %}
+                                <span style="display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.2rem 0.65rem; background: #ffe3e3; color: #c12525;">
+                                    <i style="width: 6px; height: 6px; border-radius: 50%; background: var(--hot); display: inline-block;"></i> Active
+                                </span>
+                            {% elif a.status == 'UNDER_CONTROL' %}
+                                <span style="display: inline-block; font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.2rem 0.65rem; background: #fff0d9; color: #a8650a;">
+                                    Under Control
+                                </span>
+                            {% else %}
+                                <span style="display: inline-block; font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.2rem 0.65rem; background: #dff7f0; color: #0b6b57;">
+                                    Resolved
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Action Form: Status Update & Details Modal -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle; text-align: right; white-space: nowrap;">
+                            <div style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                                <!-- Details Trigger Button -->
+                                <button type="button"
+                                    onclick="openAlertModal('{{ a.title|escapejs }}', '{{ a.severity }}', '{{ a.area.name|escapejs }}', '{{ a.description|escapejs }}', '{{ a.public_instructions|escapejs }}', '{{ a.created_at|date:"M d, Y H:i:s" }}', '{{ a.emergency_department.department_name|default:"Unassigned"|escapejs }}', '{{ a.status }}')"
+                                    onmouseover="this.style.borderColor='var(--indigo)'; this.style.color='var(--indigo)';"
+                                    onmouseout="this.style.borderColor='var(--line)'; this.style.color='var(--ink)';"
+                                    style="border: 1px solid var(--line); background: #fff; color: var(--ink); border-radius: 8px; padding: 0.35rem 0.65rem; font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: all 0.15s; font-family: inherit;">
+                                    Details
+                                </button>
+
+                                <!-- Status Quick Toggle Dropdown Form -->
+                                <form method="POST" action="{% url 'update_alert_status' a.id %}" style="display: inline; margin: 0;">
+                                    {% csrf_token %}
+                                    <select name="status" onchange="this.form.submit()"
+                                        style="border: 1px solid var(--line); border-radius: 8px; background: var(--paper); padding: 0.35rem 0.55rem; font-family: inherit; font-size: 0.76rem; font-weight: 600; color: var(--ink); outline: none; cursor: pointer;">
+                                        <option value="ACTIVE" {% if a.status == 'ACTIVE' %}selected{% endif %}>Set: Active</option>
+                                        <option value="UNDER_CONTROL" {% if a.status == 'UNDER_CONTROL' %}selected{% endif %}>Set: Under Control</option>
+                                        <option value="RESOLVED" {% if a.status == 'RESOLVED' %}selected{% endif %}>Set: Resolved</option>
+                                    </select>
+                                </form>
+                            </div>
+                        </td>
+
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 3rem 1rem; color: var(--muted); font-size: 0.88rem;">
+                            No emergency dispatch alerts recorded matching your parameters.
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+</div>
+
+<!-- Alert Details & Instructions Inspection Modal -->
+<div id="alertModal" style="display: none; position: fixed; inset: 0; background: rgba(10, 15, 36, 0.65); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; padding: 1.5rem;">
+    <div style="background: #fff; border-radius: 18px; max-width: 680px; width: 100%; overflow: hidden; box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3); border: 1px solid var(--line); animation: fadeIn 0.2s ease;">
+        
+        <div style="padding: 1.2rem 1.6rem; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <span id="modalSeverityBadge" style="font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.2rem 0.65rem;"></span>
+                <span id="modalAreaBadge" style="font-size: 0.72rem; font-weight: 600; background: #e8e9ff; color: var(--indigo); border-radius: 50px; padding: 0.2rem 0.65rem;"></span>
+            </div>
+            <button type="button" onclick="closeAlertModal()" style="border: 0; background: var(--paper); border-radius: 50%; width: 32px; height: 32px; cursor: pointer; display: grid; place-items: center; color: var(--ink); font-weight: bold;">✕</button>
+        </div>
+
+        <div style="padding: 1.6rem;">
+            <h3 id="modalTitle" style="font-size: 1.2rem; font-weight: 600; color: var(--ink); margin: 0 0 0.4rem; letter-spacing: -0.02em;"></h3>
+            <div id="modalMeta" style="font-size: 0.78rem; color: var(--muted); margin-bottom: 1.2rem;"></div>
+
+            <div style="margin-bottom: 1.2rem;">
+                <label style="display: block; font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.35rem;">
+                    Incident Description
+                </label>
+                <div id="modalDesc" style="font-size: 0.88rem; color: var(--ink); background: var(--paper); padding: 0.85rem 1rem; border-radius: 10px; line-height: 1.5; border: 1px solid var(--line);"></div>
+            </div>
+
+            <div>
+                <label style="display: block; font-size: 0.76rem; font-weight: 700; color: var(--hot); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.35rem;">
+                    Public Safety & Evacuation Instructions
+                </label>
+                <div id="modalInstructions" style="font-size: 0.88rem; color: #7f1d1d; background: #fff5f5; padding: 0.85rem 1rem; border-radius: 10px; line-height: 1.5; border: 1px solid #fed7d7;"></div>
+            </div>
+        </div>
+
+        <div style="padding: 1rem 1.6rem; background: var(--paper); border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center;">
+            <div id="modalDept" style="font-size: 0.8rem; font-weight: 600; color: var(--ink);"></div>
+            <button type="button" onclick="closeAlertModal()"
+                style="border: 0; background: var(--ink); color: #fff; border-radius: 8px; padding: 0.5rem 1rem; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit;">
+                Close Preview
+            </button>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    function openAlertModal(title, severity, area, desc, instructions, timestamp, dept, status) {
+        document.getElementById('modalTitle').textContent = title;
+        document.getElementById('modalAreaBadge').textContent = '📍 ' + area;
+        document.getElementById('modalMeta').textContent = 'Broadcasted: ' + timestamp + ' · Current Status: ' + status;
+        document.getElementById('modalDesc').textContent = desc;
+        document.getElementById('modalInstructions').textContent = instructions;
+        document.getElementById('modalDept').textContent = '🛡 Jurisdiction: ' + dept;
+
+        const sevBadge = document.getElementById('modalSeverityBadge');
+        if (severity === 'CRITICAL') {
+            sevBadge.textContent = 'CRITICAL RED ALERT';
+            sevBadge.style.background = '#ffe3e3';
+            sevBadge.style.color = '#c12525';
+        } else if (severity === 'HIGH') {
+            sevBadge.textContent = 'HIGH EMERGENCY';
+            sevBadge.style.background = '#fff0d9';
+            sevBadge.style.color = '#a8650a';
+        } else {
+            sevBadge.textContent = 'MEDIUM ATTENTION';
+            sevBadge.style.background = '#e8e9ff';
+            sevBadge.style.color = '#3a33b0';
+        }
+
+        document.getElementById('alertModal').style.display = 'flex';
+    }
+
+    function closeAlertModal() {
+        document.getElementById('alertModal').style.display = 'none';
+    }
+
+    document.getElementById('alertModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeAlertModal();
+        }
+    });
+</script>
+
+{% endblock %}

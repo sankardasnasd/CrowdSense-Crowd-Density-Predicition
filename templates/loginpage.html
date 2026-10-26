@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in – CrowdSense</title>
+<style>
+:root{
+  --ink:#0a0f24; --paper:#f3f5fb; --muted:#5a647d; --line:#d8ddec;
+  --indigo:#4338ca; --mag:#c026d3; --hot:#ff4d4d; --amber:#ff9f1c; --yellow:#ffec78; --calm:#19c3a6;
+  --font:"Sora","Segoe UI Variable Display","Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font-family:var(--font);color:var(--ink);background:#fff}
+:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+
+.wrap{display:grid;grid-template-columns:1.15fr 1fr;min-height:100vh}
+
+/* LEFT: live simulation */
+.vis{position:relative;background:var(--ink);color:#fff;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;padding:2rem 2.5rem}
+.vis canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.vis::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(10,15,36,.9) 0%,rgba(10,15,36,.15) 38%,rgba(10,15,36,.15) 60%,rgba(10,15,36,.92) 100%)}
+.vis>*:not(canvas){position:relative;z-index:2}
+.brand{display:flex;align-items:center;gap:.6rem;font-weight:600;font-size:1.15rem;color:#fff;text-decoration:none}
+.vis h2{font-size:clamp(1.6rem,2.8vw,2.5rem);line-height:1.1;letter-spacing:-.025em;font-weight:600;margin:0 0 1rem;max-width:14em}
+.live{display:inline-flex;align-items:center;gap:.5rem;font-size:.85rem;font-weight:600;padding:.35rem .8rem;border-radius:50px;transition:background .5s,color .5s}
+.live::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
+.live.ok{background:rgba(25,195,166,.18);color:var(--calm)}
+.live.bad{background:rgba(255,77,77,.2);color:#ff8585}
+.live.bad::before{animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.25}}
+.legend{height:6px;border-radius:6px;margin-top:1.1rem;max-width:260px;background:linear-gradient(90deg,#4338ca,#c026d3 30%,#ff4d4d 55%,#ff9f1c 80%,#ffec78)}
+.legend-l{display:flex;justify-content:space-between;max-width:260px;font-size:.72rem;color:#9aa5c9;margin-top:.3rem}
+
+/* RIGHT: form */
+.panel{display:flex;align-items:center;justify-content:center;padding:2.5rem 1.5rem;background:#fff}
+.box{width:100%;max-width:400px}
+.box h1{font-size:2rem;font-weight:600;letter-spacing:-.025em;margin:0 0 .5rem}
+.box .sub{color:var(--muted);margin:0 0 1.8rem;line-height:1.55}
+label{display:block;font-weight:600;font-size:.88rem;margin-bottom:.4rem}
+.field{position:relative;margin-bottom:1.15rem}
+.field input{width:100%;font:inherit;font-size:1rem;padding:.85rem 1rem;border:1.5px solid var(--line);border-radius:12px;background:var(--paper);color:var(--ink);transition:border-color .2s,background .2s,box-shadow .2s}
+.field input:hover{border-color:#b9c0d8}
+.field input:focus{outline:none;border-color:var(--indigo);background:#fff;box-shadow:0 0 0 4px rgba(67,56,202,.15)}
+.field .eye{position:absolute;right:.5rem;bottom:.45rem;border:0;background:transparent;color:var(--muted);font:inherit;font-size:.8rem;font-weight:600;padding:.4rem .6rem;border-radius:8px;cursor:pointer}
+.field .eye:hover{background:#e6e9f4;color:var(--ink)}
+.field.pw input{padding-right:4.6rem}
+.btn{width:100%;font:inherit;font-weight:600;font-size:1rem;border:0;border-radius:12px;padding:.95rem 1rem;color:#fff;cursor:pointer;background:var(--ink);transition:background .25s,transform .15s;position:relative;overflow:hidden}
+.btn::after{content:"";position:absolute;left:0;bottom:0;height:3px;width:100%;background:linear-gradient(90deg,var(--indigo),var(--mag),var(--hot),var(--amber),var(--yellow))}
+.btn:hover{background:var(--indigo)}
+.btn:active{transform:scale(.99)}
+.btn[disabled]{opacity:.7;cursor:wait}
+.msg{border-radius:12px;padding:.8rem 1rem;margin-bottom:1.2rem;font-size:.92rem;line-height:1.45;border:1px solid;animation:drop .4s ease}
+@keyframes drop{from{opacity:0;transform:translateY(-6px)}}
+.msg.warning,.msg.error{background:#fff1f1;border-color:#ffc9c9;color:#a61e1e}
+.msg.success{background:#e8fbf6;border-color:#a8ecd9;color:#0b6b57}
+.msg.info{background:#eef0ff;border-color:#c9ceff;color:#2b2a8f}
+.foot{margin-top:1.6rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:.5rem;font-size:.88rem;color:var(--muted)}
+.foot a{color:var(--indigo);font-weight:600;text-decoration:none}
+.foot a:hover{text-decoration:underline}
+.note{margin-top:1.8rem;padding-top:1.2rem;border-top:1px solid var(--line);font-size:.82rem;color:var(--muted);line-height:1.55}
+
+@media(max-width:860px){
+  .wrap{grid-template-columns:1fr}
+  .vis{min-height:240px;padding:1.4rem 1.5rem}
+  .vis h2,.legend,.legend-l{display:none}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<main class="wrap">
+
+  <aside class="vis" aria-label="Live crowd density preview">
+    <canvas id="cv" aria-hidden="true"></canvas>
+    <a class="brand" href="/myapp/public_page/">
+      <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><defs><radialGradient id="lg"><stop offset="0" stop-color="#ffec78"/><stop offset=".35" stop-color="#ff4d4d"/><stop offset=".7" stop-color="#c026d3"/><stop offset="1" stop-color="#4338ca"/></radialGradient></defs><circle cx="15" cy="15" r="14" fill="url(#lg)"/></svg>
+      CrowdSense
+    </a>
+    <div>
+      <h2>Monitor every zone. Respond before it escalates.</h2>
+      <span class="live ok" id="live">Normal</span>
+      <div class="legend"></div>
+      <div class="legend-l"><span>Low density</span><span>High density</span></div>
+    </div>
+  </aside>
+
+  <section class="panel">
+    <div class="box">
+      <h1>Sign in</h1>
+      <p class="sub">Access for administrators and emergency department staff.</p>
+
+      {% if messages %}
+        {% for message in messages %}
+          <div class="msg {{ message.tags }}" role="alert">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+
+      <form method="post" action="" id="loginForm" autocomplete="on">
+        {% csrf_token %}
+        <div class="field">
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username" required autofocus autocomplete="username">
+        </div>
+        <div class="field pw">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" required autocomplete="current-password">
+          <button type="button" class="eye" id="eye" aria-label="Show password">Show</button>
+        </div>
+        <button type="submit" class="btn" id="go">Sign in</button>
+      </form>
+
+      <div class="foot">
+        <a href="/myapp/public_page/">Back to home</a>
+        <span>Trouble signing in? Contact your administrator.</span>
+      </div>
+      <p class="note">Volunteers and public users view crowd status and alerts from their own pages. Use your assigned account to continue.</p>
+    </div>
+  </section>
+</main>
+
+<script>
+/* show / hide password */
+(function(){
+  var pw=document.getElementById('password'),eye=document.getElementById('eye');
+  eye.addEventListener('click',function(){
+    var show=pw.type==='password';
+    pw.type=show?'text':'password';
+    eye.textContent=show?'Hide':'Show';
+    eye.setAttribute('aria-label',show?'Hide password':'Show password');
+  });
+  document.getElementById('loginForm').addEventListener('submit',function(){
+    var b=document.getElementById('go');b.disabled=true;b.textContent='Signing in…';
+  });
+})();
+
+/* live thermal crowd simulation (decorative) */
+(function(){
+  var cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+  var live=document.getElementById('live');
+  var reduce=window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  var STOPS=[[0,[40,30,150,0]],[.12,[67,56,202,90]],[.3,[192,38,211,170]],[.55,[255,77,77,205]],[.8,[255,159,28,225]],[1,[255,236,120,240]]];
+  var LUT=[];
+  for(var i=0;i<256;i++){
+    var t=i/255,c=STOPS[STOPS.length-1][1];
+    for(var k=1;k<STOPS.length;k++){
+      if(t<=STOPS[k][0]){
+        var a=STOPS[k-1],b=STOPS[k],u=(t-a[0])/(b[0]-a[0]);
+        c=a[1].map(function(v,j){return v+(b[1][j]-v)*u;});break;
+      }
+    }
+    LUT.push(c);
+  }
+  var rnd=function(a,b){return a+Math.random()*(b-a);};
+  var W,H,cell,gw,gh,grid,tmp,heat,hctx,img,P=[],gx,gy,gap,sc,block=0,T0=performance.now(),frame=0,bad=false,vmax=3.2;
+
+  function spawn(init,p){
+    p=p||{};p.x=init?rnd(0,gx*.95):-8;p.y=rnd(H*.05,H*.95);p.stage=0;
+    p.v=rnd(.7,1.3);p.oy=rnd(-gap*.7,gap*.7);p.ey=gy+p.oy*3;return p;
+  }
+  function init(){
+    var r=cv.getBoundingClientRect();
+    W=cv.width=Math.max(280,Math.floor(r.width));H=cv.height=Math.max(200,Math.floor(r.height));
+    cell=Math.max(8,Math.round(W/55));gw=Math.ceil(W/cell);gh=Math.ceil(H/cell);
+    grid=new Float32Array(gw*gh);tmp=new Float32Array(gw*gh);
+    heat=document.createElement('canvas');heat.width=gw;heat.height=gh;hctx=heat.getContext('2d');img=hctx.createImageData(gw,gh);
+    gx=W*.7;gy=H*.5;gap=H*.08;sc=Math.min(1.2,Math.max(.5,W/1000));
+    P=[];var n=W<700?420:760;for(var i=0;i<n;i++)P.push(spawn(true));
+  }
+  function setBlock(){
+    var c=((performance.now()-T0)/1000)%18;
+    block=c<6?0:c<8?(c-6)/2:c<14?1:c<16?1-(c-14)/2:0;
+    var b=block>.55;
+    if(b!==bad){bad=b;live.className='live '+(b?'bad':'ok');live.textContent=b?'Anomaly detected':'Normal';}
+  }
+  function step(){
+    for(var i=0;i<P.length;i++){
+      var p=P[i];
+      var tx=p.stage===0?gx-2:W+30,ty=p.stage===0?gy+p.oy:p.ey;
+      var dx=tx-p.x,dy=ty-p.y,d=Math.hypot(dx,dy)||1,speed=p.v*sc*1.15,infl=0;
+      if(p.stage===0){var near=Math.hypot(gx-p.x,gy-p.y);infl=Math.max(0,1-near/(H*.38));speed*=1-block*.94*infl;}
+      var j=(.22+block*.9*infl)*sc;
+      p.x+=dx/d*speed+(Math.random()-.5)*j;p.y+=dy/d*speed+(Math.random()-.5)*j;
+      p.y=Math.max(2,Math.min(H-2,p.y));
+      if(p.stage===0){if(p.x>gx-3){if(Math.abs(p.y-gy)<=gap)p.stage=1;else p.x=gx-3;}}
+      else if(p.x>W+8)spawn(false,p);
+    }
+  }
+  function density(){
+    tmp.fill(0);
+    for(var i=0;i<P.length;i++){
+      var p=P[i],fx=p.x/cell-.5,fy=p.y/cell-.5,ix=Math.floor(fx),iy=Math.floor(fy),ax=fx-ix,ay=fy-iy;
+      for(var a=0;a<2;a++)for(var b=0;b<2;b++){
+        var x=ix+a,y=iy+b;
+        if(x>=0&&y>=0&&x<gw&&y<gh)tmp[y*gw+x]+=(a?ax:1-ax)*(b?ay:1-ay);
+      }
+    }
+    for(var y=0;y<gh;y++)for(var x=0;x<gw;x++){
+      var s=0,n=0;
+      for(var dy=-1;dy<=1;dy++)for(var dx=-1;dx<=1;dx++){
+        var xx=x+dx,yy=y+dy;
+        if(xx>=0&&yy>=0&&xx<gw&&yy<gh){s+=tmp[yy*gw+xx];n++;}
+      }
+      var idx=y*gw+x;grid[idx]+=(s/n-grid[idx])*.12;
+    }
+    var d=img.data;
+    for(var k=0;k<grid.length;k++){
+      var t=Math.pow(Math.min(1,grid[k]/vmax),.8),c=LUT[(t*255)|0];
+      d[k*4]=c[0];d[k*4+1]=c[1];d[k*4+2]=c[2];d[k*4+3]=c[3];
+    }
+    hctx.putImageData(img,0,0);
+  }
+  function draw(){
+    var g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#0a0f24');g.addColorStop(1,'#0f1740');
+    ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+    ctx.imageSmoothingEnabled=true;ctx.drawImage(heat,0,0,W,H);
+    ctx.fillStyle='rgba(255,255,255,.55)';
+    for(var i=0;i<P.length;i++)ctx.fillRect(P[i].x-1,P[i].y-1,2,2);
+    ctx.strokeStyle='rgba(255,255,255,.7)';ctx.lineWidth=3;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(gx,0);ctx.lineTo(gx,gy-gap);ctx.moveTo(gx,gy+gap);ctx.lineTo(gx,H);ctx.stroke();
+  }
+  var visible=true;
+  function tick(){
+    if(visible){setBlock();step();if(frame%2===0)density();draw();frame++;}
+    if(!reduce)requestAnimationFrame(tick);
+  }
+  init();
+  var rt;window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(init,150);});
+  if('IntersectionObserver' in window)new IntersectionObserver(function(e){visible=e[0].isIntersecting;}).observe(cv);
+  if(reduce){block=1;for(var s=0;s<260;s++){step();if(s%2===0)density();}draw();}else tick();
+})();
+</script>
+</body>
+</html>

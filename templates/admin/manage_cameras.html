@@ -1,0 +1,322 @@
+{% extends 'admin/admin_home sub.html' %}
+{% block body %}
+
+<div style="grid-column: 1 / -1; width: 100%; max-width: 1350px; margin: 0 auto; font-family: var(--font);">
+
+    <!-- Header Section -->
+    <div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h2 style="font-size: 1.35rem; font-weight: 600; letter-spacing: -0.02em; color: var(--ink); margin: 0; display: flex; align-items: center; gap: 0.65rem;">
+                <svg style="width: 22px; height: 22px; stroke: var(--indigo); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;" viewBox="0 0 24 24">
+                    <path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                </svg>
+                CCTV Surveillance Units
+            </h2>
+            <p style="margin: 0.35rem 0 0; color: var(--muted); font-size: 0.88rem;">
+                Configure surveillance inputs and specific area-mapped coordinates.
+            </p>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 0.5rem; background: #fff; border: 1px solid var(--line); border-radius: 50px; padding: 0.4rem 0.9rem; font-size: 0.82rem; font-weight: 600;">
+            <span style="color: var(--muted);">Mounted Cameras:</span>
+            <span style="color: var(--indigo); font-feature-settings: 'tnum';">{{ total_count }}</span>
+        </div>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div style="padding: 0.75rem 1rem; border-radius: 10px; font-size: 0.84rem; font-weight: 500; margin-bottom: 1.2rem; display: flex; align-items: center; gap: 0.6rem; {% if 'error' in message.tags or 'danger' in message.tags %}background: #ffe3e3; color: #c12525; border: 1px solid rgba(193, 37, 37, 0.2);{% elif 'success' in message.tags %}background: #e1f8f2; color: #0b6b57; border: 1px solid rgba(11, 107, 87, 0.2);{% else %}background: #fff0d9; color: #a8650a; border: 1px solid rgba(168, 101, 10, 0.2);{% endif %}" role="status">
+                <svg style="width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round;" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+                </svg>
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- ADD CAMERA FORM -->
+    <section style="background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 1.6rem 1.8rem; margin-bottom: 1.5rem; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.5rem;">
+            <h3 style="font-size: 1.12rem; color: var(--ink); font-weight: 600; margin: 0; letter-spacing: -0.02em;">
+                Mount New CCTV Camera
+            </h3>
+            <span style="font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.2rem 0.65rem; background: #e8e9ff; color: var(--indigo);">
+                ⚡ Smart Auto-Fill Coordinates
+            </span>
+        </div>
+        <p style="color: var(--muted); font-size: 0.84rem; margin: 0 0 1.3rem;">
+            Select an Area first, then start typing the exact junction/place. Suggestions tailored to that area will appear automatically.
+        </p>
+
+        <form method="POST" action="">
+            {% csrf_token %}
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem;">
+
+                <!-- Area Selection -->
+                <div>
+                    <label for="area_select" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                        Select Monitored Area <span style="color: var(--hot);">*</span>
+                    </label>
+                    <select name="area" id="area_select" required
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none; box-sizing: border-box;">
+                        <option value="">-- Choose Area First --</option>
+                        {% for a in areas %}
+                            <option value="{{ a.id }}" data-lat="{{ a.latitude }}" data-lon="{{ a.longitude }}">
+                                {{ a.name }} ({{ a.city|default:"Kerala" }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Location Details with Auto-Suggest -->
+                <div style="position: relative;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.45rem;">
+                        <label for="location_details" style="font-size: 0.82rem; font-weight: 600; color: var(--ink); margin: 0;">
+                            Location Details / Junction <span style="color: var(--hot);">*</span>
+                        </label>
+                        <span id="loc_loader" style="display: none; font-size: 0.72rem; color: var(--indigo); font-weight: 600;">
+                            Searching...
+                        </span>
+                    </div>
+                    <input type="text" name="location_details" id="location_details" placeholder="Type junction (e.g. Round East, Gate 1)" autocomplete="off" required
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none; box-sizing: border-box;">
+
+                    <!-- Suggestions Dropdown Box -->
+                    <div id="suggestions_box" style="display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 30px rgba(10, 15, 36, 0.12); z-index: 100; max-height: 220px; overflow-y: auto;"></div>
+                </div>
+
+                <!-- Auto-Populated Latitude -->
+                <div>
+                    <label for="cam_lat" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                        Latitude Coordinates <span style="font-weight: 400; color: var(--muted); font-size: 0.76rem;">(Auto-filled)</span>
+                    </label>
+                    <input type="text" name="latitude" id="cam_lat" readonly
+                        placeholder="Select location above"
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: #eef1f8; padding: 0.7rem 0.85rem; font-family: monospace; font-size: 0.88rem; color: var(--indigo); font-weight: 600; outline: none; cursor: not-allowed; box-sizing: border-box;">
+                </div>
+
+                <!-- Auto-Populated Longitude -->
+                <div>
+                    <label for="cam_lon" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                        Longitude Coordinates <span style="font-weight: 400; color: var(--muted); font-size: 0.76rem;">(Auto-filled)</span>
+                    </label>
+                    <input type="text" name="longitude" id="cam_lon" readonly
+                        placeholder="Select location above"
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: #eef1f8; padding: 0.7rem 0.85rem; font-family: monospace; font-size: 0.88rem; color: var(--indigo); font-weight: 600; outline: none; cursor: not-allowed; box-sizing: border-box;">
+                </div>
+
+                <div style="grid-column: 1 / -1; margin-top: 0.4rem;">
+                    <button type="submit"
+                        onmouseover="this.style.background='var(--indigo)'; this.style.transform='translateY(-1px)';"
+                        onmouseout="this.style.background='var(--ink)'; this.style.transform='none';"
+                        style="width: 100%; border: 0; border-radius: 10px; padding: 0.75rem 1.2rem; font-weight: 600; font-size: 0.88rem; cursor: pointer; background: var(--ink); color: #fff; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; transition: background 0.2s, transform 0.15s; font-family: inherit;">
+                        <svg style="width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round;" viewBox="0 0 24 24">
+                            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                        </svg>
+                        Enroll Camera
+                    </button>
+                </div>
+
+            </div>
+        </form>
+    </section>
+
+    <!-- LIST CAMERAS TABLE -->
+    <section style="background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 1.6rem 1.8rem; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.2rem; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <h3 style="font-size: 1.12rem; color: var(--ink); font-weight: 600; margin: 0; letter-spacing: -0.02em;">
+                    Registered Camera Units
+                </h3>
+                <p style="color: var(--muted); font-size: 0.84rem; margin: 0.2rem 0 0;">
+                    Area junctions with configured coordinates.
+                </p>
+            </div>
+
+            <form method="GET" style="display: flex; gap: 0.5rem; align-items: center; margin: 0;">
+                <input
+                    type="text"
+                    name="search"
+                    placeholder="Search camera/location..."
+                    value="{{ search_query }}"
+                    style="border: 1px solid var(--line); background: var(--paper); border-radius: 10px; padding: 0.55rem 0.75rem; font-family: inherit; font-size: 0.84rem; color: var(--ink); outline: none;"
+                >
+                <button type="submit"
+                    style="border: 0; border-radius: 10px; padding: 0.55rem 0.9rem; font-weight: 600; font-size: 0.82rem; cursor: pointer; background: var(--ink); color: #fff; font-family: inherit;">
+                    Filter
+                </button>
+            </form>
+        </div>
+
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.86rem;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--line);">
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Camera Identifier</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Assigned Area</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Specific Location Point</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Coordinates</th>
+                        <th style="text-align: right; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for c in cameras %}
+                    <tr onmouseover="this.style.background='#f8f9fd'" onmouseout="this.style.background='transparent'" style="border-bottom: 1px solid var(--line); transition: background 0.15s;">
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                            <span style="font-family: monospace; font-weight: 700; color: var(--indigo); font-size: 0.86rem;">
+                                {{ c.camera_identifier }}
+                            </span>
+                            <div style="font-size: 0.74rem; color: var(--muted);">Enrolled {{ c.created_at|date:"M d, Y" }}</div>
+                        </td>
+
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                            <span style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.74rem; font-weight: 600; background: #e8e9ff; color: var(--indigo); border-radius: 50px; padding: 0.15rem 0.55rem;">
+                                {{ c.area.name }}
+                            </span>
+                        </td>
+
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle; color: var(--ink); font-weight: 500;">
+                            {{ c.location_details }}
+                        </td>
+
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                            {% if c.latitude and c.longitude %}
+                                <span style="font-family: monospace; font-size: 0.8rem; color: var(--ink);">
+                                    📍 {{ c.latitude|floatformat:4 }}, {{ c.longitude|floatformat:4 }}
+                                </span>
+                            {% else %}
+                                <span style="color: var(--muted); font-size: 0.78rem;">No GPS sync</span>
+                            {% endif %}
+                        </td>
+
+                       <td style="padding: 0.85rem 0.75rem; vertical-align: middle; text-align: right; white-space: nowrap;">
+    <a href="{% url 'edit_camera' c.id %}"
+       onmouseover="this.style.background='var(--paper)'; this.style.borderColor='var(--ink)';"
+       onmouseout="this.style.background='#fff'; this.style.borderColor='var(--line)';"
+       style="display: inline-flex; align-items: center; font-size: 0.78rem; font-weight: 600; padding: 0.35rem 0.65rem; border-radius: 8px; border: 1px solid var(--line); background: #fff; color: var(--ink); text-decoration: none; margin-right: 0.35rem; transition: all 0.15s;">
+        Edit
+    </a>
+    <a href="{% url 'delete_camera' c.id %}"
+       onclick="return confirm('Are you sure you want to dismantle CCTV Unit: {{ c.camera_identifier }}?');"
+       onmouseover="this.style.background='var(--hot)'; this.style.color='#fff';"
+       onmouseout="this.style.background='#ffecec'; this.style.color='#b42323';"
+       style="display: inline-flex; align-items: center; font-size: 0.78rem; font-weight: 600; padding: 0.35rem 0.65rem; border-radius: 8px; background: #ffecec; color: #b42323; text-decoration: none; transition: all 0.15s;">
+        Delete
+    </a>
+</td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 2.8rem 1rem; color: var(--muted); font-size: 0.88rem;">
+                            No cameras registered yet.
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+</div>
+
+<script>
+    const areaSelect = document.getElementById('area_select');
+    const locInput = document.getElementById('location_details');
+    const suggestionsBox = document.getElementById('suggestions_box');
+    const latInput = document.getElementById('cam_lat');
+    const lonInput = document.getElementById('cam_lon');
+    const loader = document.getElementById('loc_loader');
+
+    let debounceTimer;
+
+    areaSelect.addEventListener('change', function() {
+        const opt = this.options[this.selectedIndex];
+        if (opt && opt.dataset.lat && opt.dataset.lon) {
+            latInput.value = parseFloat(opt.dataset.lat).toFixed(6);
+            lonInput.value = parseFloat(opt.dataset.lon).toFixed(6);
+        } else {
+            latInput.value = '';
+            lonInput.value = '';
+        }
+        suggestionsBox.style.display = 'none';
+        suggestionsBox.replaceChildren();
+    });
+
+    locInput.addEventListener('input', function() {
+        clearTimeout(debounceTimer);
+        const query = this.value.trim();
+        const areaId = areaSelect.value;
+
+        if (query.length < 2) {
+            suggestionsBox.style.display = 'none';
+            suggestionsBox.replaceChildren();
+            return;
+        }
+
+        debounceTimer = setTimeout(() => {
+            fetchSuggestions(query, areaId);
+        }, 300);
+    });
+
+    async function fetchSuggestions(query, areaId) {
+        loader.style.display = 'inline';
+        try {
+            const res = await fetch(`/myapp/search_camera_sublocation/?q=${encodeURIComponent(query)}&area_id=${encodeURIComponent(areaId)}`);
+            const data = await res.json();
+            renderSuggestions(data.results);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            loader.style.display = 'none';
+        }
+    }
+
+    function renderSuggestions(results) {
+        suggestionsBox.replaceChildren();
+
+        if (!results || results.length === 0) {
+            suggestionsBox.style.display = 'none';
+            return;
+        }
+
+        results.forEach(item => {
+            const div = document.createElement('div');
+            div.style.padding = '0.65rem 0.85rem';
+            div.style.fontSize = '0.82rem';
+            div.style.cursor = 'pointer';
+            div.style.borderBottom = '1px solid var(--line)';
+            div.style.transition = 'background 0.15s';
+
+            div.innerHTML = `
+                <div style="font-weight: 600; color: var(--ink);">${item.name}</div>
+                <div style="font-size: 0.74rem; color: var(--muted); margin-top: 0.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    ${item.display_name}
+                </div>
+            `;
+
+            div.onmouseover = () => { div.style.background = 'var(--paper)'; };
+            div.onmouseout = () => { div.style.background = '#fff'; };
+
+            div.addEventListener('click', () => {
+                locInput.value = item.name;
+                latInput.value = parseFloat(item.latitude).toFixed(6);
+                lonInput.value = parseFloat(item.longitude).toFixed(6);
+                suggestionsBox.style.display = 'none';
+                suggestionsBox.replaceChildren();
+            });
+
+            suggestionsBox.appendChild(div);
+        });
+
+        suggestionsBox.style.display = 'block';
+    }
+
+    document.addEventListener('click', function(e) {
+        if (!locInput.contains(e.target) && !suggestionsBox.contains(e.target)) {
+            suggestionsBox.style.display = 'none';
+        }
+    });
+</script>
+
+{% endblock %}

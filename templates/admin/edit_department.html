@@ -1,0 +1,151 @@
+{% extends 'admin/admin_home sub.html' %}
+{% block body %}
+
+<div style="grid-column: 1 / -1; width: 100%; max-width: 1060px; margin: 0 auto; font-family: var(--font);">
+
+    <!-- Breadcrumb & Header -->
+    <div style="margin-bottom: 1.5rem;">
+        <div style="font-size: 0.8rem; color: var(--muted); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">
+            <a href="/myapp/admin_home/" style="color: var(--muted); text-decoration: none;">Dashboard</a>
+            <span>/</span>
+            <a href="{% url 'manage_departments' %}" style="color: var(--muted); text-decoration: none;">Departments</a>
+            <span>/</span>
+            <span style="color: var(--ink); font-weight: 600;">Edit</span>
+        </div>
+
+        <h2 style="font-size: 1.35rem; font-weight: 600; letter-spacing: -0.02em; color: var(--ink); margin: 0; display: flex; align-items: center; gap: 0.65rem;">
+            <svg style="width: 22px; height: 22px; stroke: var(--indigo); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;" viewBox="0 0 24 24">
+                <path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>
+            </svg>
+            Edit Department
+        </h2>
+        <p style="margin: 0.35rem 0 0; color: var(--muted); font-size: 0.88rem;">
+            Update department contacts, area coverage assignments, and operational status.
+        </p>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div style="padding: 0.75rem 1rem; border-radius: 10px; font-size: 0.84rem; font-weight: 500; margin-bottom: 1.2rem; display: flex; align-items: center; gap: 0.6rem; {% if 'error' in message.tags or 'danger' in message.tags %}background: #ffe3e3; color: #c12525; border: 1px solid rgba(193, 37, 37, 0.2);{% elif 'success' in message.tags %}background: #e1f8f2; color: #0b6b57; border: 1px solid rgba(11, 107, 87, 0.2);{% else %}background: #fff0d9; color: #a8650a; border: 1px solid rgba(168, 101, 10, 0.2);{% endif %}" role="status">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Edit Form Card -->
+    <div style="background: var(--card); border: 1px solid var(--line); border-radius: 18px; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03); overflow: hidden;">
+
+        <div style="padding: 1.4rem 1.8rem; border-bottom: 1px solid var(--line); position: relative; display: flex; align-items: center; gap: 1rem;">
+            <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--indigo), var(--mag), var(--hot), var(--amber));"></div>
+            <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, var(--indigo), var(--mag)); display: grid; place-items: center; color: #fff; flex-shrink: 0;">
+                <svg style="width: 20px; height: 20px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;" viewBox="0 0 24 24">
+                    <path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>
+                </svg>
+            </div>
+            <div>
+                <h3 style="font-size: 1.12rem; color: var(--ink); font-weight: 600; margin: 0;">
+                    {{ dept.department_name }}
+                </h3>
+                <p style="color: var(--muted); font-size: 0.82rem; margin: 0.2rem 0 0;">
+                    Unique Code: <strong style="color: var(--indigo); font-family: monospace;">{{ dept.department_code }}</strong> &nbsp;|&nbsp; Username: {{ dept.LOGIN.username }}
+                </p>
+            </div>
+        </div>
+
+        <form method="POST" action="">
+            {% csrf_token %}
+            <div style="padding: 1.8rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.1rem;">
+
+                <div>
+                    <label for="department_name" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                        Department Name <span style="color: var(--hot);">*</span>
+                    </label>
+                    <input type="text" name="department_name" id="department_name" value="{{ dept.department_name }}" required
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none; box-sizing: border-box;">
+                </div>
+
+                <!-- Readonly Auto-Generated Code -->
+                <div>
+                    <label for="department_code" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                        Department Code <span style="font-weight: 400; color: var(--muted); font-size: 0.76rem;">(Permanent System Key)</span>
+                    </label>
+                    <input type="text" id="department_code" value="{{ dept.department_code }}" readonly
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: #eef1f8; padding: 0.7rem 0.85rem; font-family: monospace; font-size: 0.88rem; color: var(--indigo); font-weight: 600; outline: none; cursor: not-allowed; box-sizing: border-box;">
+                </div>
+
+                <div>
+                    <label for="department_email" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                        Email & Login Username <span style="color: var(--hot);">*</span>
+                    </label>
+                    <input type="email" name="department_email" id="department_email" value="{{ dept.LOGIN.email }}" required
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none; box-sizing: border-box;">
+                </div>
+
+                <div>
+                    <label for="contact_number" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                        Contact Number <span style="color: var(--hot);">*</span>
+                    </label>
+                    <input type="text" name="contact_number" id="contact_number" value="{{ dept.contact_number }}" required
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none; box-sizing: border-box;">
+                </div>
+
+                <div>
+                    <label for="helpline_number" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                        Helpline Number <span style="color: var(--hot);">*</span>
+                    </label>
+                    <input type="text" name="helpline_number" id="helpline_number" value="{{ dept.helpline_number }}" required
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none; box-sizing: border-box;">
+                </div>
+
+                <div>
+                    <label for="is_active" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                        Operational Status
+                    </label>
+                    <select name="is_active" id="is_active"
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none; box-sizing: border-box;">
+                        <option value="True" {% if dept.is_active %}selected{% endif %}>Active / Deployable</option>
+                        <option value="False" {% if not dept.is_active %}selected{% endif %}>Inactive / Standby</option>
+                    </select>
+                </div>
+
+                <div style="grid-column: 1 / -1;">
+                    <label for="assigned_areas" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                        Assigned Coverage Sectors (Hold Ctrl / Cmd to multi-select)
+                    </label>
+                    <select name="assigned_areas" id="assigned_areas" multiple
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.6rem 0.8rem; font-family: inherit; font-size: 0.85rem; color: var(--ink); outline: none; height: 110px; box-sizing: border-box;">
+                        {% for a in areas %}
+                            <option value="{{ a.id }}" {% if a.id in assigned_area_ids %}selected{% endif %}>
+                                {{ a.name }} ({{ a.city|default:"Kerala" }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div style="grid-column: 1 / -1;">
+                    <label for="office_address" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                        Office / Station Address <span style="color: var(--hot);">*</span>
+                    </label>
+                    <textarea name="office_address" id="office_address" rows="3" required
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none; resize: vertical; box-sizing: border-box;">{{ dept.office_address }}</textarea>
+                </div>
+
+            </div>
+
+            <div style="padding: 1.2rem 1.8rem; background: var(--paper); border-top: 1px solid var(--line); display: flex; justify-content: flex-end; gap: 0.8rem; align-items: center;">
+                <a href="{% url 'manage_departments' %}"
+                   style="border: 1px solid var(--line); background: #fff; color: var(--muted); border-radius: 10px; padding: 0.65rem 1.2rem; font-size: 0.86rem; font-weight: 600; text-decoration: none;">
+                    Cancel
+                </a>
+                <button type="submit"
+                    style="border: 0; border-radius: 10px; padding: 0.65rem 1.4rem; font-weight: 600; font-size: 0.88rem; cursor: pointer; background: var(--ink); color: #fff; font-family: inherit;">
+                    Save Changes
+                </button>
+            </div>
+        </form>
+
+    </div>
+</div>
+
+{% endblock %}

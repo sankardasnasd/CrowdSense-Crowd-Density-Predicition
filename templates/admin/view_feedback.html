@@ -1,0 +1,223 @@
+{% extends 'admin/admin_home sub.html' %}
+{% block body %}
+
+<div style="grid-column: 1 / -1; width: 100%; max-width: 1400px; margin: 0 auto; font-family: var(--font);">
+
+    <!-- Header & Breadcrumbs -->
+    <div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <div style="font-size: 0.8rem; color: var(--muted); margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.4rem;">
+                <a href="/myapp/admin_home/" style="color: var(--muted); text-decoration: none;">Dashboard</a>
+                <span>/</span>
+                <span style="color: var(--ink); font-weight: 600;">Feedback & Quality</span>
+                <span>/</span>
+                <span style="color: var(--ink); font-weight: 600;">User Feedback</span>
+            </div>
+            <h2 style="font-size: 1.35rem; font-weight: 600; letter-spacing: -0.02em; color: var(--ink); margin: 0; display: flex; align-items: center; gap: 0.65rem;">
+                <svg style="width: 22px; height: 22px; stroke: var(--amber); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;" viewBox="0 0 24 24">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
+                CrowdSense User Feedback & Ratings
+            </h2>
+            <p style="margin: 0.35rem 0 0; color: var(--muted); font-size: 0.88rem;">
+                Explore app satisfaction trends, service ratings, and public feedback comments.
+            </p>
+        </div>
+
+        <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
+            <div style="background: #fff; border: 1px solid var(--line); border-radius: 50px; padding: 0.45rem 1rem; font-size: 0.82rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
+                <i style="width: 7px; height: 7px; border-radius: 50%; background: var(--calm); display: inline-block;"></i>
+                <span style="color: var(--muted);">Total Submissions:</span>
+                <span style="color: var(--indigo); font-feature-settings: 'tnum'; font-weight: 700;">{{ total_feedbacks }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rating Distribution & Analytics Row -->
+    <div style="display: grid; grid-template-columns: 1fr 1.6fr; gap: 1.1rem; margin-bottom: 1.5rem; align-items: stretch;">
+        
+        <!-- Overall Score Card -->
+        <div style="background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 1.8rem; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+            <div style="font-size: 0.8rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Average User Rating</div>
+            <div style="font-size: 3.4rem; font-weight: 700; color: var(--ink); letter-spacing: -0.03em; margin: 0.3rem 0; font-feature-settings: 'tnum'; line-height: 1;">
+                {{ avg_score }}
+            </div>
+            <div style="color: var(--amber); font-size: 1.25rem; letter-spacing: 2px; margin-bottom: 0.5rem;">
+                {% if avg_score >= 4.5 %}★★★★★{% elif avg_score >= 3.5 %}★★★★☆{% elif avg_score >= 2.5 %}★★★☆☆{% elif avg_score >= 1.5 %}★★☆☆☆{% else %}★☆☆☆☆{% endif %}
+            </div>
+            <div style="font-size: 0.8rem; color: var(--muted);">
+                Based on <strong style="color: var(--ink);">{{ total_feedbacks }}</strong> verified user ratings
+            </div>
+            <div style="margin-top: 1rem; padding: 0.35rem 0.8rem; border-radius: 50px; background: #e1f8f2; color: #0b6b57; font-size: 0.78rem; font-weight: 600;">
+                {{ satisfaction_rate }}% Positive Experience
+            </div>
+        </div>
+
+        <!-- Star Breakdown Progress Bars -->
+        <div style="background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 1.6rem 1.8rem; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03); display: flex; flex-direction: column; justify-content: center;">
+            <div style="font-size: 0.94rem; font-weight: 600; color: var(--ink); margin-bottom: 1rem;">Rating Breakdown</div>
+            
+            <div style="display: flex; flex-direction: column; gap: 0.65rem;">
+                {% for item in star_distribution %}
+                    <div style="display: grid; grid-template-columns: 60px 1fr 45px; gap: 0.8rem; align-items: center; font-size: 0.82rem;">
+                        <span style="font-weight: 600; color: var(--ink); display: flex; align-items: center; gap: 0.2rem;">
+                            {{ item.stars }} <span style="color: var(--amber);">★</span>
+                        </span>
+                        
+                        <div style="height: 8px; border-radius: 8px; background: #e9ecf6; overflow: hidden;">
+                            <div style="height: 100%; border-radius: 8px; width: {{ item.percentage }}%; background: {% if item.stars >= 4 %}var(--calm){% elif item.stars == 3 %}var(--amber){% else %}var(--hot){% endif %}; transition: width 0.6s ease;"></div>
+                        </div>
+
+                        <span style="text-align: right; font-weight: 600; color: var(--muted); font-feature-settings: 'tnum';">
+                            {{ item.count }}
+                        </span>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Main Table Card -->
+    <section style="background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 1.6rem 1.8rem; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+        
+        <!-- Filter Bar -->
+        <form method="GET" style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; margin-bottom: 1.4rem; padding-bottom: 1.2rem; border-bottom: 1px solid var(--line);">
+            
+            <div style="flex: 1; min-width: 250px; display: flex; align-items: center; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 0 0.8rem;">
+                <svg style="width: 15px; height: 15px; stroke: var(--muted); fill: none; stroke-width: 2; stroke-linecap: round; margin-right: 0.5rem;" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input
+                    type="text"
+                    name="search"
+                    placeholder="Search comments, subject, or citizen name..."
+                    value="{{ search_query }}"
+                    style="width: 100%; border: 0; background: transparent; padding: 0.65rem 0; font-family: inherit; font-size: 0.85rem; color: var(--ink); outline: none;"
+                >
+            </div>
+
+            <div style="min-width: 160px;">
+                <select name="rating" style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.65rem 0.85rem; font-family: inherit; font-size: 0.85rem; color: var(--ink); outline: none;">
+                    <option value="">All Star Ratings</option>
+                    <option value="5" {% if rating_filter == '5' %}selected{% endif %}>5 Stars (Exceptional)</option>
+                    <option value="4" {% if rating_filter == '4' %}selected{% endif %}>4 Stars (Good)</option>
+                    <option value="3" {% if rating_filter == '3' %}selected{% endif %}>3 Stars (Average)</option>
+                    <option value="2" {% if rating_filter == '2' %}selected{% endif %}>2 Stars (Poor)</option>
+                    <option value="1" {% if rating_filter == '1' %}selected{% endif %}>1 Star (Critical)</option>
+                </select>
+            </div>
+
+            <div style="min-width: 135px;">
+                <input type="date" name="date_from" value="{{ date_from }}"
+                    style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.55rem 0.65rem; font-family: inherit; font-size: 0.82rem; color: var(--ink); outline: none; box-sizing: border-box;">
+            </div>
+
+            <div style="min-width: 135px;">
+                <input type="date" name="date_to" value="{{ date_to }}"
+                    style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.55rem 0.65rem; font-family: inherit; font-size: 0.82rem; color: var(--ink); outline: none; box-sizing: border-box;">
+            </div>
+
+            <button type="submit"
+                onmouseover="this.style.background='var(--indigo)'"
+                onmouseout="this.style.background='var(--ink)'"
+                style="border: 0; border-radius: 10px; padding: 0.65rem 1.1rem; font-weight: 600; font-size: 0.84rem; cursor: pointer; background: var(--ink); color: #fff; transition: background 0.2s; font-family: inherit;">
+                Filter
+            </button>
+
+            {% if rating_filter or search_query or date_from or date_to %}
+                <a href="{% url 'view_feedback' %}"
+                   onmouseover="this.style.borderColor='var(--ink)'"
+                   onmouseout="this.style.borderColor='var(--line)'"
+                   style="border: 1px solid var(--line); background: #fff; color: var(--muted); border-radius: 10px; padding: 0.6rem 0.9rem; font-size: 0.84rem; font-weight: 600; text-decoration: none; transition: border-color 0.2s;">
+                    Clear
+                </a>
+            {% endif %}
+
+        </form>
+
+        <!-- Feedback Records Table -->
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.86rem;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--line);">
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Submitted</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Citizen Profile</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Score & Rating</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Subject & Feedback Message</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for f in feedbacks %}
+                    <tr onmouseover="this.style.background='#f8f9fd'" onmouseout="this.style.background='transparent'" style="border-bottom: 1px solid var(--line); transition: background 0.15s;">
+                        
+                        <!-- Timestamp -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: top; white-space: nowrap;">
+                            <div style="font-weight: 600; color: var(--ink); font-feature-settings: 'tnum'; font-size: 0.84rem;">
+                                {{ f.submitted_at|date:"H:i" }}
+                            </div>
+                            <div style="font-size: 0.76rem; color: var(--muted);">
+                                {{ f.submitted_at|date:"M d, Y" }}
+                            </div>
+                        </td>
+
+                        <!-- User Profile -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: top;">
+                            <div style="display: flex; align-items: center; gap: 0.65rem;">
+                                <div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--indigo), var(--mag)); color: #fff; font-weight: 600; font-size: 0.82rem; display: grid; place-items: center; flex-shrink: 0;">
+                                    {{ f.user.name|slice:":1"|upper }}
+                                </div>
+                                <div>
+                                    <div style="font-weight: 600; color: var(--ink);">{{ f.user.name }}</div>
+                                    <div style="font-size: 0.76rem; color: var(--muted);">{{ f.user.email }}</div>
+                                    {% if f.user.area %}
+                                        <span style="display: inline-block; font-size: 0.7rem; font-weight: 600; background: #e8e9ff; color: var(--indigo); border-radius: 50px; padding: 0.05rem 0.45rem; margin-top: 0.15rem;">
+                                            {{ f.user.area.name }}
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Rating Stars -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: top; white-space: nowrap;">
+                            <div style="color: var(--amber); letter-spacing: 2px; font-size: 0.95rem;">
+                                {% if f.rating == 5 %}★★★★★
+                                {% elif f.rating == 4 %}★★★★☆
+                                {% elif f.rating == 3 %}★★★☆☆
+                                {% elif f.rating == 2 %}★★☆☆☆
+                                {% else %}★☆☆☆☆{% endif %}
+                            </div>
+                            <div style="font-size: 0.76rem; font-weight: 600; color: var(--muted); margin-top: 0.15rem;">
+                                {% if f.rating >= 4 %}<span style="color: #0b6b57;">Satisfied</span>
+                                {% elif f.rating == 3 %}<span style="color: #a8650a;">Neutral</span>
+                                {% else %}<span style="color: #c12525;">Needs Improvement</span>{% endif %}
+                            </div>
+                        </td>
+
+                        <!-- Subject & Message -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: top;">
+                            <div style="font-weight: 600; color: var(--ink); font-size: 0.9rem;">
+                                {{ f.subject }}
+                            </div>
+                            <div style="font-size: 0.84rem; color: var(--muted); margin-top: 0.25rem; line-height: 1.5; max-width: 620px;">
+                                {{ f.message }}
+                            </div>
+                        </td>
+
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="4" style="text-align: center; padding: 3rem 1rem; color: var(--muted); font-size: 0.88rem;">
+                            No feedback records found matching your filter selection.
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+</div>
+
+{% endblock %}

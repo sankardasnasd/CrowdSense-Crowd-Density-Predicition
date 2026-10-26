@@ -1,0 +1,317 @@
+{% extends 'admin/admin_home sub.html' %}
+{% block body %}
+
+<div style="grid-column: 1 / -1; width: 100%; max-width: 1400px; margin: 0 auto; font-family: var(--font);">
+
+    <!-- Header & Breadcrumbs -->
+    <div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <div style="font-size: 0.8rem; color: var(--muted); margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.4rem;">
+                <a href="/myapp/admin_home/" style="color: var(--muted); text-decoration: none;">Dashboard</a>
+                <span>/</span>
+                <span style="color: var(--ink); font-weight: 600;">Crowd Monitoring</span>
+                <span>/</span>
+                <span style="color: var(--ink); font-weight: 600;">Density Reports</span>
+            </div>
+            <h2 style="font-size: 1.35rem; font-weight: 600; letter-spacing: -0.02em; color: var(--ink); margin: 0; display: flex; align-items: center; gap: 0.65rem;">
+                <svg style="width: 22px; height: 22px; stroke: var(--indigo); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;" viewBox="0 0 24 24">
+                    <path d="M4 20V4M4 20h16"/><path d="M8 15l3-4 3 2 5-6"/>
+                </svg>
+                Crowd Density Analytics & Reports
+            </h2>
+            <p style="margin: 0.35rem 0 0; color: var(--muted); font-size: 0.88rem;">
+                Surveillance video feed logs, AI estimated headcounts, and dynamic heatmap distributions.
+            </p>
+        </div>
+
+        <div>
+            <div style="background: #fff; border: 1px solid var(--line); border-radius: 50px; padding: 0.45rem 1rem; font-size: 0.82rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
+                <i style="width: 7px; height: 7px; border-radius: 50%; background: var(--calm); display: inline-block;"></i>
+                <span style="color: var(--muted);">Captured Logs:</span>
+                <span style="color: var(--indigo); font-feature-settings: 'tnum';">{{ total_logs }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4 KPI Summary Cards -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+        
+        <div style="background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 1.2rem; position: relative; overflow: hidden;">
+            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--indigo);"></div>
+            <div style="font-size: 0.78rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Average Crowd</div>
+            <div style="font-size: 1.85rem; font-weight: 700; color: var(--ink); margin: 0.3rem 0 0.1rem; font-feature-settings: 'tnum';">
+                {{ avg_count }}
+            </div>
+            <div style="font-size: 0.76rem; color: var(--muted);">Persons per capture cycle</div>
+        </div>
+
+        <div style="background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 1.2rem; position: relative; overflow: hidden;">
+            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--mag);"></div>
+            <div style="font-size: 0.78rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Peak Density Count</div>
+            <div style="font-size: 1.85rem; font-weight: 700; color: var(--mag); margin: 0.3rem 0 0.1rem; font-feature-settings: 'tnum';">
+                {{ peak_count }}
+            </div>
+            <div style="font-size: 0.76rem; color: var(--muted);">Maximum registered volume</div>
+        </div>
+
+        <div style="background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 1.2rem; position: relative; overflow: hidden;">
+            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--amber);"></div>
+            <div style="font-size: 0.78rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">High Alert Incidents</div>
+            <div style="font-size: 1.85rem; font-weight: 700; color: var(--amber); margin: 0.3rem 0 0.1rem; font-feature-settings: 'tnum';">
+                {{ status_counts.HIGH }}
+            </div>
+            <div style="font-size: 0.76rem; color: var(--muted);">Approaching threshold</div>
+        </div>
+
+        <div style="background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 1.2rem; position: relative; overflow: hidden;">
+            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--hot);"></div>
+            <div style="font-size: 0.78rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Critical / Stampede Risk</div>
+            <div style="font-size: 1.85rem; font-weight: 700; color: var(--hot); margin: 0.3rem 0 0.1rem; font-feature-settings: 'tnum';">
+                {{ critical_alerts }}
+            </div>
+            <div style="font-size: 0.76rem; color: var(--muted);">Urgent crowd dissipation needed</div>
+        </div>
+
+    </div>
+
+    <!-- Main Table & Filter Card -->
+    <section style="background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 1.6rem 1.8rem; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+        
+        <!-- Filter Bar -->
+        <form method="GET" style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; margin-bottom: 1.4rem; padding-bottom: 1.2rem; border-bottom: 1px solid var(--line);">
+            
+            <div style="min-width: 170px;">
+                <label style="display: block; font-size: 0.74rem; font-weight: 600; color: var(--muted); margin-bottom: 0.25rem;">Sector Area</label>
+                <select name="area" style="width: 100%; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); padding: 0.55rem 0.75rem; font-family: inherit; font-size: 0.84rem; color: var(--ink); outline: none;">
+                    <option value="">All Monitored Areas</option>
+                    {% for a in areas %}
+                        <option value="{{ a.id }}" {% if area_filter == a.id|stringformat:"s" %}selected{% endif %}>{{ a.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="min-width: 170px;">
+                <label style="display: block; font-size: 0.74rem; font-weight: 600; color: var(--muted); margin-bottom: 0.25rem;">CCTV Stream</label>
+                <select name="camera" style="width: 100%; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); padding: 0.55rem 0.75rem; font-family: inherit; font-size: 0.84rem; color: var(--ink); outline: none;">
+                    <option value="">All Cameras</option>
+                    {% for c in cameras %}
+                        <option value="{{ c.id }}" {% if camera_filter == c.id|stringformat:"s" %}selected{% endif %}>{{ c.camera_identifier }} - {{ c.location_details|truncatechars:18 }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="min-width: 160px;">
+                <label style="display: block; font-size: 0.74rem; font-weight: 600; color: var(--muted); margin-bottom: 0.25rem;">Density Level</label>
+                <select name="status" style="width: 100%; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); padding: 0.55rem 0.75rem; font-family: inherit; font-size: 0.84rem; color: var(--ink); outline: none;">
+                    <option value="">All Statuses</option>
+                    <option value="NORMAL" {% if status_filter == 'NORMAL' %}selected{% endif %}>Normal</option>
+                    <option value="MODERATE" {% if status_filter == 'MODERATE' %}selected{% endif %}>Moderate</option>
+                    <option value="HIGH" {% if status_filter == 'HIGH' %}selected{% endif %}>High Density</option>
+                    <option value="CRITICAL" {% if status_filter == 'CRITICAL' %}selected{% endif %}>Critical / Overcrowded</option>
+                </select>
+            </div>
+
+            <div style="min-width: 140px;">
+                <label style="display: block; font-size: 0.74rem; font-weight: 600; color: var(--muted); margin-bottom: 0.25rem;">Date From</label>
+                <input type="date" name="date_from" value="{{ date_from }}"
+                    style="width: 100%; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); padding: 0.5rem 0.65rem; font-family: inherit; font-size: 0.82rem; color: var(--ink); outline: none; box-sizing: border-box;">
+            </div>
+
+            <div style="min-width: 140px;">
+                <label style="display: block; font-size: 0.74rem; font-weight: 600; color: var(--muted); margin-bottom: 0.25rem;">Date To</label>
+                <input type="date" name="date_to" value="{{ date_to }}"
+                    style="width: 100%; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); padding: 0.5rem 0.65rem; font-family: inherit; font-size: 0.82rem; color: var(--ink); outline: none; box-sizing: border-box;">
+            </div>
+
+            <div style="margin-top: 1.15rem; display: flex; gap: 0.4rem;">
+                <button type="submit"
+                    onmouseover="this.style.background='var(--indigo)'"
+                    onmouseout="this.style.background='var(--ink)'"
+                    style="border: 0; border-radius: 9px; padding: 0.55rem 1rem; font-weight: 600; font-size: 0.82rem; cursor: pointer; background: var(--ink); color: #fff; transition: background 0.2s; font-family: inherit;">
+                    Apply Filter
+                </button>
+
+                {% if area_filter or camera_filter or status_filter or date_from or date_to %}
+                    <a href="{% url 'density_reports' %}"
+                       onmouseover="this.style.borderColor='var(--ink)'"
+                       onmouseout="this.style.borderColor='var(--line)'"
+                       style="border: 1px solid var(--line); background: #fff; color: var(--muted); border-radius: 9px; padding: 0.5rem 0.85rem; font-size: 0.82rem; font-weight: 600; text-decoration: none; transition: border-color 0.2s;">
+                        Reset
+                    </a>
+                {% endif %}
+            </div>
+
+        </form>
+
+        <!-- Density Logs Table -->
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.86rem;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--line);">
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Timestamp</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Source Camera</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Sector & Junction</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Headcount</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Risk Level</th>
+                        <th style="text-align: right; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Heatmap Visualization</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for log in logs %}
+                    <tr onmouseover="this.style.background='#f8f9fd'" onmouseout="this.style.background='transparent'" style="border-bottom: 1px solid var(--line); transition: background 0.15s;">
+                        
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle; white-space: nowrap;">
+                            <div style="font-weight: 600; color: var(--ink); font-feature-settings: 'tnum'; font-size: 0.84rem;">
+                                {{ log.recorded_at|date:"H:i:s" }}
+                            </div>
+                            <div style="font-size: 0.76rem; color: var(--muted);">
+                                {{ log.recorded_at|date:"M d, Y" }}
+                            </div>
+                        </td>
+
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                            <div style="display: flex; align-items: center; gap: 0.55rem;">
+                                <div style="width: 30px; height: 30px; border-radius: 8px; background: #eef1f8; display: grid; place-items: center; color: var(--indigo); flex-shrink: 0;">
+                                    <svg style="width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;" viewBox="0 0 24 24">
+                                        <path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                                    </svg>
+                                </div>
+                                <span style="font-family: monospace; font-weight: 700; color: var(--ink); font-size: 0.84rem;">
+                                    {{ log.camera.camera_identifier }}
+                                </span>
+                            </div>
+                        </td>
+
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                            <div>
+                                <span style="display: inline-block; font-size: 0.72rem; font-weight: 600; background: #e8e9ff; color: var(--indigo); border-radius: 50px; padding: 0.1rem 0.5rem; margin-bottom: 0.2rem;">
+                                    {{ log.camera.area.name }}
+                                </span>
+                            </div>
+                            <div style="font-size: 0.8rem; color: var(--muted);">
+                                📍 {{ log.camera.location_details }}
+                            </div>
+                        </td>
+
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                            <div style="display: flex; align-items: baseline; gap: 0.35rem;">
+                                <span style="font-weight: 700; color: var(--ink); font-feature-settings: 'tnum'; font-size: 1.05rem;">
+                                    {{ log.estimated_crowd_count }}
+                                </span>
+                                <span style="color: var(--muted); font-size: 0.74rem;">people</span>
+                            </div>
+                        </td>
+
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                            {% if log.status == 'CRITICAL' %}
+                                <span style="display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.2rem 0.65rem; background: #ffe3e3; color: #c12525; box-shadow: 0 0 0 1px rgba(255, 77, 77, 0.25);">
+                                    <i style="width: 6px; height: 6px; border-radius: 50%; background: var(--hot); display: inline-block;"></i> Critical Risk
+                                </span>
+                            {% elif log.status == 'HIGH' %}
+                                <span style="display: inline-block; font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.2rem 0.65rem; background: #fff0d9; color: #a8650a;">
+                                    High Density
+                                </span>
+                            {% elif log.status == 'MODERATE' %}
+                                <span style="display: inline-block; font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.2rem 0.65rem; background: #e8e9ff; color: #3a33b0;">
+                                    Moderate
+                                </span>
+                            {% else %}
+                                <span style="display: inline-block; font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.2rem 0.65rem; background: #dff7f0; color: #0b6b57;">
+                                    Normal Flux
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle; text-align: right; white-space: nowrap;">
+                            {% if log.density_map_image %}
+                                <button type="button"
+                                    onclick="openHeatmapModal('{{ log.density_map_image.url }}', '{{ log.camera.camera_identifier }}', '{{ log.recorded_at|date:"M d, Y H:i:s" }}', '{{ log.estimated_crowd_count }}', '{{ log.status }}')"
+                                    onmouseover="this.style.borderColor='var(--indigo)'; this.style.color='var(--indigo)';"
+                                    onmouseout="this.style.borderColor='var(--line)'; this.style.color='var(--ink)';"
+                                    style="border: 1px solid var(--line); background: #fff; color: var(--ink); border-radius: 8px; padding: 0.35rem 0.65rem; font-size: 0.78rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; transition: all 0.15s; font-family: inherit;">
+                                    <img src="{{ log.density_map_image.url }}" alt="Heatmap" style="width: 18px; height: 18px; border-radius: 4px; object-fit: cover;">
+                                    Inspect Heatmap
+                                </button>
+                            {% else %}
+                                <span style="color: var(--muted); font-size: 0.76rem;">No Capture Map</span>
+                            {% endif %}
+                        </td>
+
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 3rem 1rem; color: var(--muted); font-size: 0.88rem;">
+                            No crowd density records matched your filter criteria.
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+</div>
+
+<!-- Heatmap Inspection Modal -->
+<div id="heatmapModal" style="display: none; position: fixed; inset: 0; background: rgba(10, 15, 36, 0.6); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; padding: 1.5rem;">
+    <div style="background: #fff; border-radius: 18px; max-width: 720px; width: 100%; overflow: hidden; box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3); border: 1px solid var(--line); animation: fadeIn 0.2s ease;">
+
+        <div style="padding: 1.1rem 1.4rem; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h3 id="modalCam" style="font-size: 1.05rem; font-weight: 600; color: var(--ink); margin: 0;">Camera Feed Inspection</h3>
+                <div id="modalMeta" style="font-size: 0.78rem; color: var(--muted); margin-top: 0.15rem;"></div>
+            </div>
+            <button type="button" onclick="closeHeatmapModal()" style="border: 0; background: var(--paper); border-radius: 50%; width: 32px; height: 32px; cursor: pointer; display: grid; place-items: center; color: var(--ink); font-weight: bold;">✕</button>
+        </div>
+
+        <div style="padding: 1.2rem; background: #0a0f24; display: grid; place-items: center;">
+            <img id="modalImg" src="" alt="Heatmap Enlarged" style="max-width: 100%; max-height: 480px; object-fit: contain; border-radius: 8px;">
+        </div>
+
+        <div style="padding: 0.9rem 1.4rem; background: var(--paper); display: flex; justify-content: space-between; align-items: center;">
+            <span id="modalRisk" style="font-size: 0.8rem; font-weight: 700;"></span>
+            <a id="modalDownload" href="" download target="_blank"
+               style="font-size: 0.8rem; font-weight: 600; color: var(--indigo); text-decoration: none;">
+                Download High-Res Map ↗
+            </a>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    function openHeatmapModal(imgUrl, camId, timestamp, count, status) {
+        document.getElementById('modalImg').src = imgUrl;
+        document.getElementById('modalCam').textContent = 'Camera: ' + camId;
+        document.getElementById('modalMeta').textContent = timestamp + ' · Estimated Headcount: ' + count + ' persons';
+        document.getElementById('modalDownload').href = imgUrl;
+
+        const riskEl = document.getElementById('modalRisk');
+        if (status === 'CRITICAL') {
+            riskEl.textContent = 'Status: CRITICAL OVERCROWDING';
+            riskEl.style.color = '#c12525';
+        } else if (status === 'HIGH') {
+            riskEl.textContent = 'Status: HIGH DENSITY FLUX';
+            riskEl.style.color = '#a8650a';
+        } else {
+            riskEl.textContent = 'Status: ' + status;
+            riskEl.style.color = '#0b6b57';
+        }
+
+        const modal = document.getElementById('heatmapModal');
+        modal.style.display = 'flex';
+    }
+
+    function closeHeatmapModal() {
+        document.getElementById('heatmapModal').style.display = 'none';
+        document.getElementById('modalImg').src = '';
+    }
+
+    document.getElementById('heatmapModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeHeatmapModal();
+        }
+    });
+</script>
+
+{% endblock %}

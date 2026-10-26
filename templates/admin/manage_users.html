@@ -1,0 +1,172 @@
+{% extends 'admin/admin_home sub.html' %}
+{% block body %}
+
+<div style="grid-column: 1 / -1; width: 100%; max-width: 1300px; margin: 0 auto; font-family: var(--font);">
+
+    <!-- Header Section -->
+    <div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h2 style="font-size: 1.35rem; font-weight: 600; letter-spacing: -0.02em; color: var(--ink); margin: 0; display: flex; align-items: center; gap: 0.65rem;">
+                <svg style="width: 22px; height: 22px; stroke: var(--indigo); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;" viewBox="0 0 24 24">
+                    <circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-4 3-6 6.5-6s6.5 2 6.5 6"/><path d="M16 4.5a3.5 3.5 0 010 7M18 14.5c2 .7 3.5 2.4 3.5 5.5"/>
+                </svg>
+                Registered App Users
+            </h2>
+            <p style="margin: 0.35rem 0 0; color: var(--muted); font-size: 0.88rem;">
+                Review registered mobile users, linked monitoring sectors, and geographic telemetry.
+            </p>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 0.6rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; background: #fff; border: 1px solid var(--line); border-radius: 50px; padding: 0.4rem 0.9rem; font-size: 0.82rem; font-weight: 600;">
+                <span style="color: var(--muted);">Total Active:</span>
+                <span style="color: var(--indigo); font-feature-settings: 'tnum';">{{ total_count }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feedback Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div style="padding: 0.75rem 1rem; border-radius: 10px; font-size: 0.84rem; font-weight: 500; margin-bottom: 1.2rem; display: flex; align-items: center; gap: 0.6rem; {% if 'error' in message.tags or 'danger' in message.tags %}background: #ffe3e3; color: #c12525; border: 1px solid rgba(193, 37, 37, 0.2);{% elif 'success' in message.tags %}background: #e1f8f2; color: #0b6b57; border: 1px solid rgba(11, 107, 87, 0.2);{% else %}background: #fff0d9; color: #a8650a; border: 1px solid rgba(168, 101, 10, 0.2);{% endif %}" role="status">
+                <svg style="width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round;" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+                </svg>
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Filter & Table Card -->
+    <section style="background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 1.5rem 1.8rem; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+
+        <!-- Filter ToolBar -->
+        <form method="GET" style="display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap; margin-bottom: 1.3rem;">
+            <!-- Search Text -->
+            <div style="flex: 1; min-width: 240px; display: flex; align-items: center; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 0 0.8rem;">
+                <svg style="width: 15px; height: 15px; stroke: var(--muted); fill: none; stroke-width: 2; stroke-linecap: round; margin-right: 0.5rem;" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input
+                    type="text"
+                    name="search"
+                    placeholder="Search name, email, phone, or place..."
+                    value="{{ search_query }}"
+                    style="width: 100%; border: 0; background: transparent; padding: 0.65rem 0; font-family: inherit; font-size: 0.85rem; color: var(--ink); outline: none;"
+                >
+            </div>
+
+            <!-- Area Filter Dropdown -->
+            <div style="min-width: 180px;">
+                <select name="area" style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.65rem 0.85rem; font-family: inherit; font-size: 0.85rem; color: var(--ink); outline: none;">
+                    <option value="">All Monitored Areas</option>
+                    {% for a in areas %}
+                        <option value="{{ a.id }}" {% if selected_area == a.id|stringformat:"s" %}selected{% endif %}>
+                            {{ a.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Action Buttons -->
+            <button type="submit"
+                onmouseover="this.style.background='var(--indigo)'"
+                onmouseout="this.style.background='var(--ink)'"
+                style="border: 0; border-radius: 10px; padding: 0.65rem 1.1rem; font-weight: 600; font-size: 0.84rem; cursor: pointer; background: var(--ink); color: #fff; transition: background 0.2s; font-family: inherit; display: inline-flex; align-items: center; gap: 0.4rem;">
+                <svg style="width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round;" viewBox="0 0 24 24">
+                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+                </svg>
+                Filter
+            </button>
+
+            {% if search_query or selected_area %}
+                <a href="{% url 'manage_users' %}"
+                   onmouseover="this.style.borderColor='var(--ink)'"
+                   onmouseout="this.style.borderColor='var(--line)'"
+                   style="border: 1px solid var(--line); background: #fff; color: var(--muted); border-radius: 10px; padding: 0.6rem 0.9rem; font-size: 0.84rem; font-weight: 600; text-decoration: none; transition: border-color 0.2s;">
+                    Reset
+                </a>
+            {% endif %}
+        </form>
+
+        <!-- User Data Table (Read-Only) -->
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.86rem;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--line);">
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">User Details</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Contact</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Place</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Assigned Area</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Last Telemetry</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                {% for u in users %}
+                    <tr onmouseover="this.style.background='#f8f9fd'" onmouseout="this.style.background='transparent'" style="border-bottom: 1px solid var(--line); transition: background 0.15s;">
+                        <!-- Name & Username -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <div style="width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, var(--indigo), var(--mag)); color: #fff; font-weight: 600; font-size: 0.82rem; display: grid; place-items: center; flex: none;">
+                                    {{ u.name|slice:":1"|upper }}
+                                </div>
+                                <div>
+                                    <div style="font-weight: 600; color: var(--ink);">{{ u.name }}</div>
+                                    <div style="font-size: 0.78rem; color: var(--muted);">@{{ u.LOGIN.username }}</div>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Contact -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                            <div style="color: var(--ink); font-feature-settings: 'tnum'; font-size: 0.84rem;">{{ u.phone }}</div>
+                            <div style="font-size: 0.78rem; color: var(--muted);">{{ u.email }}</div>
+                        </td>
+
+                        <!-- Place -->
+                        <td style="padding: 0.85rem 0.75rem; color: var(--ink); vertical-align: middle;">
+                            {{ u.place|default:"-" }}
+                        </td>
+
+                        <!-- Linked Area -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                            {% if u.area %}
+                                <span style="display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; font-weight: 600; padding: 0.2rem 0.65rem; border-radius: 50px; background: #e8e9ff; color: var(--indigo);">
+                                    <svg style="width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2;" viewBox="0 0 24 24">
+                                        <path d="M12 21s7-6 7-11.5A7 7 0 005 9.5C5 15 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>
+                                    </svg>
+                                    {{ u.area.name }}
+                                </span>
+                            {% else %}
+                                <span style="color: var(--muted); font-size: 0.78rem;">Unassigned</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Lat / Long Telemetry -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                            {% if u.latitude and u.longitude %}
+                                <div style="display: flex; align-items: center; gap: 0.4rem; font-feature-settings: 'tnum'; font-size: 0.8rem; color: var(--ink);">
+                                    <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--calm);"></span>
+                                    {{ u.latitude|floatformat:4 }}, {{ u.longitude|floatformat:4 }}
+                                </div>
+                            {% else %}
+                                <span style="color: var(--muted); font-size: 0.78rem;">No GPS sync</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 2.8rem 1rem; color: var(--muted); font-size: 0.88rem;">
+                            No registered users found matching the selected filter.
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+</div>
+
+{% endblock %}

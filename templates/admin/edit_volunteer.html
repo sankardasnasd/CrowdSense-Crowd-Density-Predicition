@@ -1,0 +1,176 @@
+{% extends 'admin/admin_home sub.html' %}
+{% block body %}
+
+<div style="grid-column: 1 / -1; width: 100%; max-width: 1060px; margin: 0 auto; font-family: var(--font);">
+
+    <!-- Breadcrumbs -->
+    <div style="margin-bottom: 1.5rem;">
+        <div style="font-size: 0.8rem; color: var(--muted); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">
+            <a href="/myapp/admin_home/" style="color: var(--muted); text-decoration: none;">Dashboard</a>
+            <span>/</span>
+            <a href="{% url 'manage_volunteers' %}" style="color: var(--muted); text-decoration: none;">Volunteers</a>
+            <span>/</span>
+            <span style="color: var(--ink); font-weight: 600;">Edit</span>
+        </div>
+
+        <h2 style="font-size: 1.35rem; font-weight: 600; letter-spacing: -0.02em; color: var(--ink); margin: 0; display: flex; align-items: center; gap: 0.65rem;">
+            <svg style="width: 22px; height: 22px; stroke: var(--indigo); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;" viewBox="0 0 24 24">
+                <path d="M12 20s-8-5-8-11a4.5 4.5 0 018-2.5A4.5 4.5 0 0120 9c0 6-8 11-8 11z"/>
+            </svg>
+            Edit Volunteer Details
+        </h2>
+        <p style="margin: 0.35rem 0 0; color: var(--muted); font-size: 0.88rem;">
+            Adjust volunteer approval status, update assigned department, and modify contact records.
+        </p>
+    </div>
+
+    <!-- Django Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div style="padding: 0.75rem 1rem; border-radius: 10px; font-size: 0.84rem; font-weight: 500; margin-bottom: 1.2rem; display: flex; align-items: center; gap: 0.6rem; {% if 'error' in message.tags or 'danger' in message.tags %}background: #ffe3e3; color: #c12525; border: 1px solid rgba(193, 37, 37, 0.2);{% elif 'success' in message.tags %}background: #e1f8f2; color: #0b6b57; border: 1px solid rgba(11, 107, 87, 0.2);{% else %}background: #fff0d9; color: #a8650a; border: 1px solid rgba(168, 101, 10, 0.2);{% endif %}" role="status">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Edit Form Card -->
+    <div style="background: var(--card); border: 1px solid var(--line); border-radius: 18px; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03); overflow: hidden;">
+
+        <div style="padding: 1.4rem 1.8rem; border-bottom: 1px solid var(--line); position: relative; display: flex; align-items: center; gap: 1rem;">
+            <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--indigo), var(--mag), var(--hot), var(--amber));"></div>
+
+            {% if vol.photo %}
+                <img src="{{ vol.photo.url }}" alt="{{ vol.name }}" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 1px solid var(--line); flex-shrink: 0;">
+            {% else %}
+                <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, var(--indigo), var(--mag)); display: grid; place-items: center; color: #fff; flex-shrink: 0;">
+                    {{ vol.name|slice:":1"|upper }}
+                </div>
+            {% endif %}
+
+            <div>
+                <h3 style="font-size: 1.12rem; color: var(--ink); font-weight: 600; margin: 0;">
+                    {{ vol.name }}
+                </h3>
+                <p style="color: var(--muted); font-size: 0.82rem; margin: 0.2rem 0 0;">
+                    Username: <strong style="color: var(--ink);">{{ vol.LOGIN.username }}</strong> &nbsp;|&nbsp; Enrolled: {{ vol.join_at|date:"M d, Y"|default:"Recently" }}
+                </p>
+            </div>
+        </div>
+
+        <form method="POST" action="" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div style="padding: 1.8rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.1rem;">
+
+                <div>
+                    <label for="name" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                        Full Name <span style="color: var(--hot);">*</span>
+                    </label>
+                    <input type="text" name="name" id="name" value="{{ vol.name }}" required
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none; box-sizing: border-box;">
+                </div>
+
+                <div>
+                    <label for="email" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                        Email & Login Account <span style="color: var(--hot);">*</span>
+                    </label>
+                    <input type="email" name="email" id="email" value="{{ vol.email }}" required
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none; box-sizing: border-box;">
+                </div>
+
+                <div>
+                    <label for="phone" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                        Phone Number <span style="color: var(--hot);">*</span>
+                    </label>
+                    <input type="text" name="phone" id="phone" value="{{ vol.phone }}" required
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none; box-sizing: border-box;">
+                </div>
+
+                <div>
+                    <label for="place" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                        Place / Town <span style="color: var(--hot);">*</span>
+                    </label>
+                    <input type="text" name="place" id="place" value="{{ vol.place }}" required
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none; box-sizing: border-box;">
+                </div>
+
+                <!-- Emergency Department Assignment -->
+                <div>
+                    <label for="emergency_department" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                        Assigned Emergency Department
+                    </label>
+                    <select name="emergency_department" id="emergency_department"
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none; box-sizing: border-box;">
+                        <option value="">-- None (Standby Reserve) --</option>
+                        {% for d in departments %}
+                            <option value="{{ d.id }}" {% if vol.emergency_department_id == d.id %}selected{% endif %}>
+                                {{ d.department_name }} ({{ d.department_code }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label for="approval_status" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                        Approval Status <span style="color: var(--hot);">*</span>
+                    </label>
+                    <select name="approval_status" id="approval_status"
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none; box-sizing: border-box;">
+                        <option value="APPROVED" {% if vol.approval_status == 'APPROVED' %}selected{% endif %}>Approved</option>
+                        <option value="PENDING" {% if vol.approval_status == 'PENDING' %}selected{% endif %}>Pending Verification</option>
+                        <option value="REJECTED" {% if vol.approval_status == 'REJECTED' %}selected{% endif %}>Rejected</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="availability_status" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                        Field Duty Availability <span style="color: var(--hot);">*</span>
+                    </label>
+                    <select name="availability_status" id="availability_status"
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none; box-sizing: border-box;">
+                        <option value="AVAILABLE" {% if vol.availability_status == 'AVAILABLE' %}selected{% endif %}>Available for Dispatch</option>
+                        <option value="ON_DUTY" {% if vol.availability_status == 'ON_DUTY' %}selected{% endif %}>On Duty</option>
+                        <option value="OFFLINE" {% if vol.availability_status == 'OFFLINE' %}selected{% endif %}>Offline / Standby</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="photo" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                        Change Photo <span style="font-weight: 400; color: var(--muted); font-size: 0.76rem;">(Optional)</span>
+                    </label>
+                    <input type="file" name="photo" id="photo" accept="image/*"
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.55rem 0.85rem; font-family: inherit; font-size: 0.82rem; color: var(--ink); outline: none; box-sizing: border-box;">
+                </div>
+
+                <div style="grid-column: 1 / -1;">
+                    <label for="id_proof" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                        Update ID Proof <span style="font-weight: 400; color: var(--muted); font-size: 0.76rem;">(Optional)</span>
+                    </label>
+                    <input type="file" name="id_proof" id="id_proof" accept="image/*,application/pdf"
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.55rem 0.85rem; font-family: inherit; font-size: 0.82rem; color: var(--ink); outline: none; box-sizing: border-box;">
+                    {% if vol.id_proof %}
+                        <div style="margin-top: 0.35rem;">
+                            <a href="{{ vol.id_proof.url }}" target="_blank" style="font-size: 0.76rem; color: var(--indigo); text-decoration: none; font-weight: 600;">
+                                📄 View Current Uploaded ID
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+
+            </div>
+
+            <div style="padding: 1.2rem 1.8rem; background: var(--paper); border-top: 1px solid var(--line); display: flex; justify-content: flex-end; gap: 0.8rem; align-items: center;">
+                <a href="{% url 'manage_volunteers' %}"
+                   style="border: 1px solid var(--line); background: #fff; color: var(--muted); border-radius: 10px; padding: 0.65rem 1.2rem; font-size: 0.86rem; font-weight: 600; text-decoration: none;">
+                    Cancel
+                </a>
+                <button type="submit"
+                    style="border: 0; border-radius: 10px; padding: 0.65rem 1.4rem; font-weight: 600; font-size: 0.88rem; cursor: pointer; background: var(--ink); color: #fff; font-family: inherit;">
+                    Save Changes
+                </button>
+            </div>
+        </form>
+
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,334 @@
+{% extends 'admin/admin_home sub.html' %}
+{% block body %}
+
+<div style="grid-column: 1 / -1; width: 100%; max-width: 1350px; margin: 0 auto; font-family: var(--font);">
+
+    <!-- Header Section -->
+    <div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h2 style="font-size: 1.35rem; font-weight: 600; letter-spacing: -0.02em; color: var(--ink); margin: 0; display: flex; align-items: center; gap: 0.65rem;">
+                <svg style="width: 22px; height: 22px; stroke: var(--indigo); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;" viewBox="0 0 24 24">
+                    <path d="M12 20s-8-5-8-11a4.5 4.5 0 018-2.5A4.5 4.5 0 0120 9c0 6-8 11-8 11z"/>
+                </svg>
+                Manage Volunteers
+            </h2>
+            <p style="margin: 0.35rem 0 0; color: var(--muted); font-size: 0.88rem;">
+                Enlist field volunteers, verify ID credentials, and monitor department-based coverage.
+            </p>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 0.5rem; background: #fff; border: 1px solid var(--line); border-radius: 50px; padding: 0.4rem 0.9rem; font-size: 0.82rem; font-weight: 600;">
+            <span style="color: var(--muted);">Total Field Volunteers:</span>
+            <span style="color: var(--indigo); font-feature-settings: 'tnum';">{{ total_count }}</span>
+        </div>
+    </div>
+
+    <!-- Django Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div style="padding: 0.75rem 1rem; border-radius: 10px; font-size: 0.84rem; font-weight: 500; margin-bottom: 1.2rem; display: flex; align-items: center; gap: 0.6rem; {% if 'error' in message.tags or 'danger' in message.tags %}background: #ffe3e3; color: #c12525; border: 1px solid rgba(193, 37, 37, 0.2);{% elif 'success' in message.tags %}background: #e1f8f2; color: #0b6b57; border: 1px solid rgba(11, 107, 87, 0.2);{% else %}background: #fff0d9; color: #a8650a; border: 1px solid rgba(168, 101, 10, 0.2);{% endif %}" role="status">
+                <svg style="width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round;" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+                </svg>
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- ADD VOLUNTEER FORM -->
+    <section style="background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 1.6rem 1.8rem; margin-bottom: 1.5rem; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.5rem;">
+            <h3 style="font-size: 1.12rem; color: var(--ink); font-weight: 600; margin: 0; letter-spacing: -0.02em;">
+                Register New Volunteer
+            </h3>
+            <span style="font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.2rem 0.65rem; background: #e8e9ff; color: var(--indigo);">
+                Auto Account Generation
+            </span>
+        </div>
+        <p style="color: var(--muted); font-size: 0.84rem; margin: 0 0 1.3rem;">
+            Volunteers inherit operational sectors directly from their selected emergency department. Contact phone serves as initial login password.
+        </p>
+
+        <form method="POST" action="" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem;">
+
+                <div>
+                    <label for="name" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                        Full Name <span style="color: var(--hot);">*</span>
+                    </label>
+                    <input type="text" name="name" id="name" placeholder="e.g. Rahul Nair" required
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none; box-sizing: border-box;">
+                </div>
+
+                <div>
+                    <label for="email" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                        Email Address (Username) <span style="color: var(--hot);">*</span>
+                    </label>
+                    <input type="email" name="email" id="email" placeholder="e.g. rahul.vol@gmail.com" required
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none; box-sizing: border-box;">
+                </div>
+
+                <div>
+                    <label for="phone" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                        Phone Number (Initial Password) <span style="color: var(--hot);">*</span>
+                    </label>
+                    <input type="text" name="phone" id="phone" placeholder="e.g. 9876543210" required
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none; box-sizing: border-box;">
+                </div>
+
+                <div>
+                    <label for="place" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                        Place / Town <span style="color: var(--hot);">*</span>
+                    </label>
+                    <input type="text" name="place" id="place" placeholder="e.g. Edappally, Kochi" required
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none; box-sizing: border-box;">
+                </div>
+
+                <!-- Emergency Department Selection (Area selection not needed) -->
+                <div>
+                    <label for="emergency_department" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                        Assigned Emergency Department <span style="color: var(--hot);">*</span>
+                    </label>
+                    <select name="emergency_department" id="emergency_department" required
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.7rem 0.85rem; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none; box-sizing: border-box;">
+                        <option value="">-- Select Department --</option>
+                        {% for d in departments %}
+                            <option value="{{ d.id }}">{{ d.department_name }} ({{ d.department_code }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label for="photo" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                        Volunteer Photo <span style="color: var(--hot);">*</span>
+                    </label>
+                    <input type="file" name="photo" id="photo" accept="image/*" required
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.55rem 0.85rem; font-family: inherit; font-size: 0.82rem; color: var(--ink); outline: none; box-sizing: border-box;">
+                </div>
+
+                <div style="grid-column: 1 / -1;">
+                    <label for="id_proof" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.45rem;">
+                        Government ID Proof (PDF / Image) <span style="color: var(--hot);">*</span>
+                    </label>
+                    <input type="file" name="id_proof" id="id_proof" accept="image/*,application/pdf" required
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.55rem 0.85rem; font-family: inherit; font-size: 0.82rem; color: var(--ink); outline: none; box-sizing: border-box;">
+                </div>
+
+                <div style="grid-column: 1 / -1; margin-top: 0.4rem;">
+                    <button type="submit"
+                        onmouseover="this.style.background='var(--indigo)'; this.style.transform='translateY(-1px)';"
+                        onmouseout="this.style.background='var(--ink)'; this.style.transform='none';"
+                        style="width: 100%; border: 0; border-radius: 10px; padding: 0.75rem 1.2rem; font-weight: 600; font-size: 0.88rem; cursor: pointer; background: var(--ink); color: #fff; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; transition: background 0.2s, transform 0.15s; font-family: inherit;">
+                        <svg style="width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round;" viewBox="0 0 24 24">
+                            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                        </svg>
+                        Enroll Volunteer
+                    </button>
+                </div>
+
+            </div>
+        </form>
+    </section>
+
+    <!-- LIST VOLUNTEERS TABLE CARD -->
+    <section style="background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 1.6rem 1.8rem; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+
+        <!-- Filter Toolbar -->
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.2rem; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <h3 style="font-size: 1.12rem; color: var(--ink); font-weight: 600; margin: 0; letter-spacing: -0.02em;">
+                    Enrolled Volunteers
+                </h3>
+                <p style="color: var(--muted); font-size: 0.84rem; margin: 0.2rem 0 0;">
+                    Monitor field availability, identity verification files, and department coverage.
+                </p>
+            </div>
+
+            <form method="GET" style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin: 0;">
+                <div style="display: flex; align-items: center; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 0 0.75rem;">
+                    <svg style="width: 15px; height: 15px; stroke: var(--muted); fill: none; stroke-width: 2; stroke-linecap: round; margin-right: 0.4rem;" viewBox="0 0 24 24">
+                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    <input
+                        type="text"
+                        name="search"
+                        placeholder="Search volunteer..."
+                        value="{{ search_query }}"
+                        style="border: 0; background: transparent; padding: 0.55rem 0; font-family: inherit; font-size: 0.84rem; color: var(--ink); outline: none; width: 150px;"
+                    >
+                </div>
+
+                <select name="status" style="border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.55rem 0.75rem; font-family: inherit; font-size: 0.84rem; color: var(--ink); outline: none;">
+                    <option value="">All Approvals</option>
+                    <option value="APPROVED" {% if status_filter == 'APPROVED' %}selected{% endif %}>Approved</option>
+                    <option value="PENDING" {% if status_filter == 'PENDING' %}selected{% endif %}>Pending</option>
+                    <option value="REJECTED" {% if status_filter == 'REJECTED' %}selected{% endif %}>Rejected</option>
+                </select>
+
+                <select name="dept" style="border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.55rem 0.75rem; font-family: inherit; font-size: 0.84rem; color: var(--ink); outline: none;">
+                    <option value="">All Departments</option>
+                    {% for d in departments %}
+                        <option value="{{ d.id }}" {% if dept_filter == d.id|stringformat:"s" %}selected{% endif %}>{{ d.department_name }}</option>
+                    {% endfor %}
+                </select>
+
+                <button type="submit"
+                    onmouseover="this.style.background='var(--indigo)'"
+                    onmouseout="this.style.background='var(--ink)'"
+                    style="border: 0; border-radius: 10px; padding: 0.55rem 0.9rem; font-weight: 600; font-size: 0.82rem; cursor: pointer; background: var(--ink); color: #fff; transition: background 0.2s; font-family: inherit;">
+                    Filter
+                </button>
+
+                {% if search_query or status_filter or dept_filter %}
+                    <a href="{% url 'manage_volunteers' %}"
+                       onmouseover="this.style.borderColor='var(--ink)'"
+                       onmouseout="this.style.borderColor='var(--line)'"
+                       style="border: 1px solid var(--line); background: #fff; color: var(--muted); border-radius: 10px; padding: 0.5rem 0.85rem; font-size: 0.82rem; font-weight: 600; text-decoration: none; transition: border-color 0.2s;">
+                        Clear
+                    </a>
+                {% endif %}
+            </form>
+        </div>
+
+        <!-- Table View -->
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.86rem;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--line);">
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Volunteer</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Contact & Place</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Assigned Department & Active Sectors</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Status</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Credentials</th>
+                        <th style="text-align: right; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for v in volunteers %}
+                    <tr onmouseover="this.style.background='#f8f9fd'" onmouseout="this.style.background='transparent'" style="border-bottom: 1px solid var(--line); transition: background 0.15s;">
+                        <!-- Identity -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                {% if v.photo %}
+                                    <img src="{{ v.photo.url }}" alt="{{ v.name }}" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 1px solid var(--line); flex-shrink: 0;">
+                                {% else %}
+                                    <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--indigo), var(--mag)); color: #fff; font-weight: 600; font-size: 0.85rem; display: grid; place-items: center; flex-shrink: 0;">
+                                        {{ v.name|slice:":1"|upper }}
+                                    </div>
+                                {% endif %}
+                                <div>
+                                    <div style="font-weight: 600; color: var(--ink);">{{ v.name }}</div>
+                                    <div style="font-size: 0.76rem; color: var(--muted);">Joined {{ v.join_at|date:"M d, Y"|default:"Recently" }}</div>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Contact & Place -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                            <div style="color: var(--ink); font-feature-settings: 'tnum'; font-size: 0.84rem;">📞 {{ v.phone }}</div>
+                            <div style="font-size: 0.78rem; color: var(--muted);">📍 {{ v.place }}</div>
+                        </td>
+
+                        <!-- Inherited Department and Areas -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                            {% if v.emergency_department %}
+                                <div style="font-weight: 600; color: var(--ink); font-size: 0.82rem; margin-bottom: 0.25rem;">
+                                    {{ v.emergency_department.department_name }}
+                                </div>
+                                <!-- Department-ന്റെ കീഴിലുള്ള Area-കൾ ഇവിടെ ഓട്ടോമാറ്റിക് ആയി വരുന്നു -->
+                                <div style="display: flex; flex-wrap: wrap; gap: 0.3rem; max-width: 250px;">
+                                    {% for area in v.emergency_department.assigned_areas.all %}
+                                        <span style="font-size: 0.7rem; font-weight: 600; background: #e8e9ff; color: var(--indigo); border-radius: 50px; padding: 0.1rem 0.45rem;">
+                                            {{ area.name }}
+                                        </span>
+                                    {% empty %}
+                                        <span style="color: var(--muted); font-size: 0.74rem;">(No active sectors linked)</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <span style="color: var(--hot); font-size: 0.78rem; font-weight: 600;">No Department Assigned</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Status Tags -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                            <div>
+                                {% if v.approval_status == 'APPROVED' %}
+                                    <span style="display: inline-block; font-size: 0.7rem; font-weight: 700; border-radius: 50px; padding: 0.15rem 0.55rem; background: #dff7f0; color: #0b6b57;">
+                                        Approved
+                                    </span>
+                                {% elif v.approval_status == 'PENDING' %}
+                                    <span style="display: inline-block; font-size: 0.7rem; font-weight: 700; border-radius: 50px; padding: 0.15rem 0.55rem; background: #fff0d9; color: #a8650a;">
+                                        Pending
+                                    </span>
+                                {% else %}
+                                    <span style="display: inline-block; font-size: 0.7rem; font-weight: 700; border-radius: 50px; padding: 0.15rem 0.55rem; background: #ffe3e3; color: #c12525;">
+                                        Rejected
+                                    </span>
+                                {% endif %}
+                            </div>
+                            <div style="margin-top: 0.25rem;">
+                                {% if v.availability_status == 'ON_DUTY' %}
+                                    <span style="display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.7rem; font-weight: 600; color: var(--hot);">
+                                        <i style="width: 5px; height: 5px; border-radius: 50%; background: var(--hot); display: inline-block;"></i> On Duty
+                                    </span>
+                                {% elif v.availability_status == 'AVAILABLE' %}
+                                    <span style="display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.7rem; font-weight: 600; color: var(--calm);">
+                                        <i style="width: 5px; height: 5px; border-radius: 50%; background: var(--calm); display: inline-block;"></i> Available
+                                    </span>
+                                {% else %}
+                                    <span style="font-size: 0.7rem; color: var(--muted);">Offline</span>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        <!-- ID Proof Link -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                            {% if v.id_proof %}
+                                <a href="{{ v.id_proof.url }}" target="_blank"
+                                   onmouseover="this.style.textDecoration='underline'"
+                                   onmouseout="this.style.textDecoration='none'"
+                                   style="display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.78rem; font-weight: 600; color: var(--indigo); text-decoration: none;">
+                                    <svg style="width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2;" viewBox="0 0 24 24">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                                    </svg>
+                                    View ID
+                                </a>
+                            {% else %}
+                                <span style="color: var(--muted); font-size: 0.76rem;">No ID Uploaded</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Action Buttons -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle; text-align: right; white-space: nowrap;">
+                            <a href="{% url 'edit_volunteer' v.id %}"
+                               onmouseover="this.style.background='var(--paper)'; this.style.borderColor='var(--ink)';"
+                               onmouseout="this.style.background='#fff'; this.style.borderColor='var(--line)';"
+                               style="display: inline-flex; align-items: center; font-size: 0.78rem; font-weight: 600; padding: 0.35rem 0.65rem; border-radius: 8px; border: 1px solid var(--line); background: #fff; color: var(--ink); text-decoration: none; margin-right: 0.3rem; transition: all 0.15s;">
+                                Edit
+                            </a>
+                            <a href="{% url 'delete_volunteer' v.id %}"
+                               onclick="return confirm('Are you sure you want to delete this volunteer and their login account?');"
+                               onmouseover="this.style.background='var(--hot)'; this.style.color='#fff';"
+                               onmouseout="this.style.background='#ffecec'; this.style.color='#b42323';"
+                               style="display: inline-flex; align-items: center; font-size: 0.78rem; font-weight: 600; padding: 0.35rem 0.65rem; border-radius: 8px; background: #ffecec; color: #b42323; text-decoration: none; transition: all 0.15s;">
+                                Delete
+                            </a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 2.8rem 1rem; color: var(--muted); font-size: 0.88rem;">
+                            No volunteers found matching your query.
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+</div>
+
+{% endblock %}

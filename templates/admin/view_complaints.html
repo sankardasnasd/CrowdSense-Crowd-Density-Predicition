@@ -1,0 +1,331 @@
+{% extends 'admin/admin_home sub.html' %}
+{% block body %}
+
+<div style="grid-column: 1 / -1; width: 100%; max-width: 1400px; margin: 0 auto; font-family: var(--font);">
+
+    <!-- Header Section -->
+    <div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <div style="font-size: 0.8rem; color: var(--muted); margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.4rem;">
+                <a href="/myapp/admin_home/" style="color: var(--muted); text-decoration: none;">Dashboard</a>
+                <span>/</span>
+                <span style="color: var(--ink); font-weight: 600;">Feedback & Grievance</span>
+                <span>/</span>
+                <span style="color: var(--ink); font-weight: 600;">Complaints</span>
+            </div>
+            <h2 style="font-size: 1.35rem; font-weight: 600; letter-spacing: -0.02em; color: var(--ink); margin: 0; display: flex; align-items: center; gap: 0.65rem;">
+                <svg style="width: 22px; height: 22px; stroke: var(--indigo); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;" viewBox="0 0 24 24">
+                    <path d="M4 5h16v11H9l-5 4z"/>
+                </svg>
+                User Grievances & Inquiries
+            </h2>
+            <p style="margin: 0.35rem 0 0; color: var(--muted); font-size: 0.88rem;">
+                Review registered mobile app grievances, inspect incident contexts, and dispatch official admin resolutions.
+            </p>
+        </div>
+
+        <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
+            <div style="background: #fff; border: 1px solid var(--line); border-radius: 50px; padding: 0.45rem 1rem; font-size: 0.82rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
+                <i style="width: 7px; height: 7px; border-radius: 50%; background: var(--hot); display: inline-block;"></i>
+                <span style="color: var(--muted);">Pending Resolutions:</span>
+                <span style="color: var(--hot); font-feature-settings: 'tnum'; font-weight: 700;">{{ pending_count }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feedback Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div style="padding: 0.75rem 1rem; border-radius: 10px; font-size: 0.84rem; font-weight: 500; margin-bottom: 1.2rem; display: flex; align-items: center; gap: 0.6rem; {% if 'error' in message.tags or 'danger' in message.tags %}background: #ffe3e3; color: #c12525; border: 1px solid rgba(193, 37, 37, 0.2);{% elif 'success' in message.tags %}background: #e1f8f2; color: #0b6b57; border: 1px solid rgba(11, 107, 87, 0.2);{% else %}background: #fff0d9; color: #a8650a; border: 1px solid rgba(168, 101, 10, 0.2);{% endif %}" role="status">
+                <svg style="width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round;" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+                </svg>
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- 3 Summary Metrics -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+        
+        <div style="background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 1.2rem; position: relative; overflow: hidden;">
+            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--hot);"></div>
+            <div style="font-size: 0.78rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Pending Grievances</div>
+            <div style="font-size: 1.85rem; font-weight: 700; color: var(--hot); margin: 0.3rem 0 0.1rem; font-feature-settings: 'tnum';">
+                {{ pending_count }}
+            </div>
+            <div style="font-size: 0.76rem; color: var(--muted);">Awaiting administrator review</div>
+        </div>
+
+        <div style="background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 1.2rem; position: relative; overflow: hidden;">
+            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--calm);"></div>
+            <div style="font-size: 0.78rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Resolved / Replied</div>
+            <div style="font-size: 1.85rem; font-weight: 700; color: var(--calm); margin: 0.3rem 0 0.1rem; font-feature-settings: 'tnum';">
+                {{ replied_count }}
+            </div>
+            <div style="font-size: 0.76rem; color: var(--muted);">Addressed and closed</div>
+        </div>
+
+        <div style="background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 1.2rem; position: relative; overflow: hidden;">
+            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--indigo);"></div>
+            <div style="font-size: 0.78rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Total Complaints Logged</div>
+            <div style="font-size: 1.85rem; font-weight: 700; color: var(--ink); margin: 0.3rem 0 0.1rem; font-feature-settings: 'tnum';">
+                {{ total_complaints }}
+            </div>
+            <div style="font-size: 0.76rem; color: var(--muted);">Lifetime user submissions</div>
+        </div>
+
+    </div>
+
+    <!-- Main Table Card -->
+    <section style="background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 1.6rem 1.8rem; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+        
+        <!-- Filter Bar -->
+        <form method="GET" style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; margin-bottom: 1.4rem; padding-bottom: 1.2rem; border-bottom: 1px solid var(--line);">
+            
+            <div style="flex: 1; min-width: 250px; display: flex; align-items: center; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 0 0.8rem;">
+                <svg style="width: 15px; height: 15px; stroke: var(--muted); fill: none; stroke-width: 2; stroke-linecap: round; margin-right: 0.5rem;" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input
+                    type="text"
+                    name="search"
+                    placeholder="Search subject, description, user, or phone..."
+                    value="{{ search_query }}"
+                    style="width: 100%; border: 0; background: transparent; padding: 0.65rem 0; font-family: inherit; font-size: 0.85rem; color: var(--ink); outline: none;"
+                >
+            </div>
+
+            <div style="min-width: 170px;">
+                <select name="status" style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.65rem 0.85rem; font-family: inherit; font-size: 0.85rem; color: var(--ink); outline: none;">
+                    <option value="">All Resolution Statuses</option>
+                    <option value="Pending" {% if status_filter == 'Pending' %}selected{% endif %}>Pending Only</option>
+                    <option value="Replied" {% if status_filter == 'Replied' %}selected{% endif %}>Replied Only</option>
+                </select>
+            </div>
+
+            <button type="submit"
+                onmouseover="this.style.background='var(--indigo)'"
+                onmouseout="this.style.background='var(--ink)'"
+                style="border: 0; border-radius: 10px; padding: 0.65rem 1.1rem; font-weight: 600; font-size: 0.84rem; cursor: pointer; background: var(--ink); color: #fff; transition: background 0.2s; font-family: inherit;">
+                Filter
+            </button>
+
+            {% if status_filter or search_query %}
+                <a href="{% url 'view_complaints' %}"
+                   onmouseover="this.style.borderColor='var(--ink)'"
+                   onmouseout="this.style.borderColor='var(--line)'"
+                   style="border: 1px solid var(--line); background: #fff; color: var(--muted); border-radius: 10px; padding: 0.6rem 0.9rem; font-size: 0.84rem; font-weight: 600; text-decoration: none; transition: border-color 0.2s;">
+                    Clear
+                </a>
+            {% endif %}
+
+        </form>
+
+        <!-- Complaints Table -->
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.86rem;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--line);">
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Submitted</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Complainant Details</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Grievance Subject & Description</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Status</th>
+                        <th style="text-align: right; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for c in complaints %}
+                    <tr onmouseover="this.style.background='#f8f9fd'" onmouseout="this.style.background='transparent'" style="border-bottom: 1px solid var(--line); transition: background 0.15s;">
+                        
+                        <!-- Timestamp -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle; white-space: nowrap;">
+                            <div style="font-weight: 600; color: var(--ink); font-feature-settings: 'tnum'; font-size: 0.84rem;">
+                                {{ c.submitted_at|date:"H:i" }}
+                            </div>
+                            <div style="font-size: 0.76rem; color: var(--muted);">
+                                {{ c.submitted_at|date:"M d, Y" }}
+                            </div>
+                        </td>
+
+                        <!-- User Profile -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                            <div style="font-weight: 600; color: var(--ink);">{{ c.user.name }}</div>
+                            <div style="font-size: 0.76rem; color: var(--muted);">📞 {{ c.user.phone }}</div>
+                            {% if c.user.area %}
+                                <span style="display: inline-block; font-size: 0.7rem; font-weight: 600; background: #e8e9ff; color: var(--indigo); border-radius: 50px; padding: 0.05rem 0.45rem; margin-top: 0.2rem;">
+                                    {{ c.user.area.name }}
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Subject & Content Preview -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                            <div style="font-weight: 600; color: var(--ink); font-size: 0.88rem;">
+                                {{ c.subject }}
+                            </div>
+                            <div style="font-size: 0.78rem; color: var(--muted); margin-top: 0.2rem; max-width: 440px; line-height: 1.45; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                {{ c.description }}
+                            </div>
+                            {% if c.admin_response %}
+                                <div style="margin-top: 0.35rem; font-size: 0.76rem; color: #0b6b57; display: flex; align-items: center; gap: 0.3rem;">
+                                    <svg style="width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2;" viewBox="0 0 24 24">
+                                        <polyline points="20 6 9 17 4 12"/>
+                                    </svg>
+                                    Replied: <span style="font-style: italic;">"{{ c.admin_response|truncatechars:45 }}"</span>
+                                </div>
+                            {% endif %}
+                        </td>
+
+                        <!-- Status Badge -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                            {% if c.status == 'Pending' %}
+                                <span style="display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.2rem 0.65rem; background: #ffe3e3; color: #c12525;">
+                                    <i style="width: 6px; height: 6px; border-radius: 50%; background: var(--hot); display: inline-block;"></i> Pending
+                                </span>
+                            {% else %}
+                                <span style="display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.2rem 0.65rem; background: #dff7f0; color: #0b6b57;">
+                                    <i style="width: 6px; height: 6px; border-radius: 50%; background: var(--calm); display: inline-block;"></i> Replied
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Reply / Inspect Action Button -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle; text-align: right; white-space: nowrap;">
+                            <button type="button"
+                                onclick="openReplyModal('{{ c.id }}', '{{ c.user.name|escapejs }}', '{{ c.user.phone|escapejs }}', '{{ c.user.email|escapejs }}', '{{ c.user.place|escapejs }}', '{{ c.subject|escapejs }}', '{{ c.description|escapejs }}', '{{ c.admin_response|default:""|escapejs }}', '{{ c.status }}', '{{ c.submitted_at|date:"M d, Y H:i" }}', '{{ c.resolved_at|date:"M d, Y H:i"|default:"" }}')"
+                                onmouseover="this.style.background='var(--indigo)'; this.style.color='#fff';"
+                                onmouseout="this.style.background='var(--ink)'; this.style.color='#fff';"
+                                style="border: 0; background: var(--ink); color: #fff; border-radius: 8px; padding: 0.4rem 0.8rem; font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: background 0.15s; font-family: inherit; display: inline-flex; align-items: center; gap: 0.4rem;">
+                                <svg style="width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2;" viewBox="0 0 24 24">
+                                    <polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/>
+                                </svg>
+                                {% if c.status == 'Pending' %}Reply{% else %}View / Update{% endif %}
+                            </button>
+                        </td>
+
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 3rem 1rem; color: var(--muted); font-size: 0.88rem;">
+                            No complaints registered matching your search criteria.
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+</div>
+
+<!-- Reply & Inspection Modal -->
+<div id="replyModal" style="display: none; position: fixed; inset: 0; background: rgba(10, 15, 36, 0.65); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; padding: 1.5rem;">
+    <div style="background: #fff; border-radius: 18px; max-width: 680px; width: 100%; overflow: hidden; box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3); border: 1px solid var(--line); animation: fadeIn 0.2s ease;">
+        
+        <div style="padding: 1.2rem 1.6rem; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h3 id="modalSubject" style="font-size: 1.15rem; font-weight: 600; color: var(--ink); margin: 0; letter-spacing: -0.02em;"></h3>
+                <div id="modalSubmittedMeta" style="font-size: 0.78rem; color: var(--muted); margin-top: 0.2rem;"></div>
+            </div>
+            <button type="button" onclick="closeReplyModal()" style="border: 0; background: var(--paper); border-radius: 50%; width: 32px; height: 32px; cursor: pointer; display: grid; place-items: center; color: var(--ink); font-weight: bold;">✕</button>
+        </div>
+
+        <form method="POST" id="modalReplyForm" action="" style="margin: 0;">
+            {% csrf_token %}
+            <div style="padding: 1.6rem; max-height: calc(85vh - 140px); overflow-y: auto;">
+                
+                <!-- Complainant Meta Bar -->
+                <div style="background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 0.9rem 1.1rem; margin-bottom: 1.2rem; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.8rem; font-size: 0.82rem;">
+                    <div>
+                        <div style="color: var(--muted); font-size: 0.74rem;">Complainant</div>
+                        <div id="modalUserName" style="font-weight: 600; color: var(--ink);"></div>
+                    </div>
+                    <div>
+                        <div style="color: var(--muted); font-size: 0.74rem;">Contact</div>
+                        <div id="modalUserContact" style="color: var(--ink);"></div>
+                    </div>
+                    <div>
+                        <div style="color: var(--muted); font-size: 0.74rem;">Location</div>
+                        <div id="modalUserPlace" style="color: var(--ink);"></div>
+                    </div>
+                </div>
+
+                <!-- Complaint Content -->
+                <div style="margin-bottom: 1.3rem;">
+                    <label style="display: block; font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.4rem;">
+                        Reported Grievance
+                    </label>
+                    <div id="modalDescription" style="font-size: 0.88rem; color: var(--ink); background: #fbfcfe; padding: 0.9rem 1rem; border-radius: 10px; line-height: 1.5; border: 1px solid var(--line);"></div>
+                </div>
+
+                <!-- Admin Response Box -->
+                <div>
+                    <label for="admin_response_text" style="display: block; font-size: 0.76rem; font-weight: 700; color: var(--indigo); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.4rem;">
+                        Official Admin Resolution Reply <span style="color: var(--hot);">*</span>
+                    </label>
+                    <textarea name="admin_response" id="admin_response_text" rows="4" required
+                        placeholder="Write official resolution notes and action directives for the user..."
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: #fff; padding: 0.75rem 0.9rem; font-family: inherit; font-size: 0.88rem; color: var(--ink); outline: none; resize: vertical; box-sizing: border-box;"></textarea>
+                    <p style="font-size: 0.76rem; color: var(--muted); margin: 0.4rem 0 0;">
+                        Submitting this response sets status to <strong style="color: #0b6b57;">Replied</strong> and logs the resolution timestamp.
+                    </p>
+                </div>
+
+            </div>
+
+            <div style="padding: 1rem 1.6rem; background: var(--paper); border-top: 1px solid var(--line); display: flex; justify-content: flex-end; gap: 0.8rem; align-items: center;">
+                <button type="button" onclick="closeReplyModal()"
+                    style="border: 1px solid var(--line); background: #fff; color: var(--muted); border-radius: 9px; padding: 0.6rem 1.1rem; font-size: 0.84rem; font-weight: 600; cursor: pointer;">
+                    Cancel
+                </button>
+                <button type="submit" id="btnSubmitReply"
+                    onmouseover="this.style.background='var(--indigo)'"
+                    onmouseout="this.style.background='var(--ink)'"
+                    style="border: 0; background: var(--ink); color: #fff; border-radius: 9px; padding: 0.6rem 1.3rem; font-size: 0.84rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.45rem; transition: background 0.15s; font-family: inherit;">
+                    <svg style="width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2;" viewBox="0 0 24 24">
+                        <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                    </svg>
+                    Send Resolution Reply
+                </button>
+            </div>
+        </form>
+
+    </div>
+</div>
+
+<script>
+    function openReplyModal(id, userName, userPhone, userEmail, userPlace, subject, description, currentResponse, status, submittedAt, resolvedAt) {
+        document.getElementById('modalReplyForm').action = '/myapp/reply_complaint/' + id + '/';
+        document.getElementById('modalSubject').textContent = subject;
+        document.getElementById('modalSubmittedMeta').textContent = 'Submitted: ' + submittedAt + (resolvedAt ? ' · Last Replied: ' + resolvedAt : '');
+        document.getElementById('modalUserName').textContent = userName;
+        document.getElementById('modalUserContact').textContent = userPhone + ' (' + userEmail + ')';
+        document.getElementById('modalUserPlace').textContent = userPlace || 'Not Specified';
+        document.getElementById('modalDescription').textContent = description;
+        
+        const responseInput = document.getElementById('admin_response_text');
+        responseInput.value = currentResponse;
+
+        const btn = document.getElementById('btnSubmitReply');
+        if (status === 'Replied') {
+            btn.textContent = 'Update Resolution Reply';
+        } else {
+            btn.textContent = 'Send Resolution Reply';
+        }
+
+        document.getElementById('replyModal').style.display = 'flex';
+    }
+
+    function closeReplyModal() {
+        document.getElementById('replyModal').style.display = 'none';
+    }
+
+    document.getElementById('replyModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeReplyModal();
+        }
+    });
+</script>
+
+{% endblock %}
