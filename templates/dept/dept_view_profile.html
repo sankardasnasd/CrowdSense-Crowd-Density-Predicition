@@ -1,0 +1,187 @@
+{% extends 'dept/department_home.html' %}
+{% block body %}
+
+<div style="grid-column: 1 / -1; width: 100%; max-width: 1100px; margin: 0 auto; font-family: var(--font);">
+
+    <!-- Header Section -->
+    <div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <div style="font-size: 0.8rem; color: var(--muted); margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.4rem;">
+                <a href="/myapp/department_home/" style="color: var(--muted); text-decoration: none;">Tactical Terminal</a>
+                <span>/</span>
+                <span style="color: var(--ink); font-weight: 600;">Account</span>
+                <span>/</span>
+                <span style="color: var(--ink); font-weight: 600;">Department Profile</span>
+            </div>
+            <h2 style="font-size: 1.35rem; font-weight: 600; letter-spacing: -0.02em; color: var(--ink); margin: 0; display: flex; align-items: center; gap: 0.65rem;">
+                <svg style="width: 22px; height: 22px; stroke: var(--indigo); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;" viewBox="0 0 24 24">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                </svg>
+                Department Operational Profile
+            </h2>
+            <p style="margin: 0.35rem 0 0; color: var(--muted); font-size: 0.88rem;">
+                Verified station credentials, dispatch authority, and active field jurisdiction.
+            </p>
+        </div>
+
+        <div>
+            <span style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.9rem; border-radius: 50px; background: #fff; border: 1px solid var(--line); font-size: 0.82rem; font-weight: 600;">
+                <i style="width: 7px; height: 7px; border-radius: 50%; background: var(--calm); display: inline-block;"></i>
+                Verified Authority Terminal
+            </span>
+        </div>
+    </div>
+
+    <!-- Main Profile Card -->
+    <div style="background: var(--card); border: 1px solid var(--line); border-radius: 18px; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03); overflow: hidden; margin-bottom: 1.5rem;">
+        
+        <!-- Header Banner with Status Gradient Strip -->
+        <div style="padding: 1.6rem 2rem; border-bottom: 1px solid var(--line); position: relative; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+            <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--indigo), var(--mag), var(--hot), var(--amber));"></div>
+            
+            <div style="display: flex; align-items: center; gap: 1.1rem;">
+                <div style="width: 56px; height: 56px; border-radius: 16px; background: linear-gradient(135deg, var(--indigo), var(--mag)); display: grid; place-items: center; color: #fff; font-size: 1.35rem; font-weight: 700; flex-shrink: 0; box-shadow: 0 10px 25px rgba(67, 56, 202, 0.3);">
+                    {{ dept.department_code|slice:":2" }}
+                </div>
+                <div>
+                    <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--ink); margin: 0; letter-spacing: -0.02em;">
+                        {{ dept.department_name }}
+                    </h3>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.35rem;">
+                        <span style="font-family: monospace; font-size: 0.8rem; font-weight: 700; background: #eef1f8; color: var(--indigo); padding: 0.15rem 0.55rem; border-radius: 6px; border: 1px solid var(--line);">
+                            {{ dept.department_code }}
+                        </span>
+                        <span style="font-size: 0.78rem; color: var(--muted);">
+                            User: <strong>@{{ dept.LOGIN.username }}</strong>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Operational Status Tag -->
+            <div>
+                {% if dept.is_active %}
+                    <span style="display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.76rem; font-weight: 700; border-radius: 50px; padding: 0.3rem 0.85rem; background: #dff7f0; color: #0b6b57;">
+                        <i style="width: 6px; height: 6px; border-radius: 50%; background: var(--calm); display: inline-block;"></i> Active / Ready for Dispatch
+                    </span>
+                {% else %}
+                    <span style="display: inline-block; font-size: 0.76rem; font-weight: 700; border-radius: 50px; padding: 0.3rem 0.85rem; background: #ffe3e3; color: #c12525;">
+                        Offline / Standby
+                    </span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Read-Only Details Grid -->
+        <div style="padding: 2rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.4rem;">
+            
+            <!-- Contact Phone -->
+            <div style="background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 1.1rem;">
+                <div style="font-size: 0.74rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.35rem;">
+                    Station Dispatch Line
+                </div>
+                <div style="font-size: 1.1rem; font-weight: 700; color: var(--ink); font-feature-settings: 'tnum';">
+                    📞 {{ dept.contact_number }}
+                </div>
+                <div style="font-size: 0.74rem; color: var(--muted); margin-top: 0.2rem;">Internal control room phone</div>
+            </div>
+
+            <!-- Public Helpline -->
+            <div style="background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 1.1rem;">
+                <div style="font-size: 0.74rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.35rem;">
+                    Public Emergency Helpline
+                </div>
+                <div style="font-size: 1.1rem; font-weight: 700; color: var(--hot); font-feature-settings: 'tnum';">
+                    🚨 {{ dept.helpline_number }}
+                </div>
+                <div style="font-size: 0.74rem; color: var(--muted); margin-top: 0.2rem;">Citizen distress channel</div>
+            </div>
+
+            <!-- Official Email -->
+            <div style="background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 1.1rem;">
+                <div style="font-size: 0.74rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.35rem;">
+                    Official Account Email
+                </div>
+                <div style="font-size: 0.95rem; font-weight: 600; color: var(--ink); word-break: break-all;">
+                    ✉️ {{ dept.LOGIN.email }}
+                </div>
+                <div style="font-size: 0.74rem; color: var(--muted); margin-top: 0.2rem;">System notifications target</div>
+            </div>
+
+            <!-- Active Personnel Count -->
+            <div style="background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 1.1rem;">
+                <div style="font-size: 0.74rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.35rem;">
+                    Enrolled Personnel
+                </div>
+                <div style="font-size: 1.1rem; font-weight: 700; color: var(--indigo); font-feature-settings: 'tnum';">
+                    👥 {{ volunteer_count }} Volunteers
+                </div>
+                <div style="font-size: 0.74rem; color: var(--muted); margin-top: 0.2rem;">Attached field resources</div>
+            </div>
+
+            <!-- Station Address -->
+            <div style="grid-column: 1 / -1; background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 1.2rem;">
+                <div style="font-size: 0.74rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.35rem;">
+                    Station / Base Camp Address
+                </div>
+                <div style="font-size: 0.92rem; color: var(--ink); line-height: 1.5; font-weight: 500;">
+                    📍 {{ dept.office_address }}
+                </div>
+            </div>
+
+            <!-- Assigned Jurisdiction Sectors -->
+            <div style="grid-column: 1 / -1; background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 1.2rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+                    <div style="font-size: 0.74rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">
+                        Assigned Coverage Sectors
+                    </div>
+                    <span style="font-size: 0.74rem; font-weight: 600; color: var(--indigo);">
+                        {{ assigned_areas.count }} Monitored Areas
+                    </span>
+                </div>
+
+                <div style="display: flex; flex-wrap: wrap; gap: 0.45rem;">
+                    {% for a in assigned_areas %}
+                        <div style="display: inline-flex; align-items: center; gap: 0.35rem; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 0.4rem 0.8rem; font-size: 0.82rem;">
+                            <span style="font-weight: 600; color: var(--ink);">{{ a.name }}</span>
+                            <span style="color: var(--muted); font-size: 0.74rem;">({{ a.city|default:"Kerala" }})</span>
+                        </div>
+                    {% empty %}
+                        <span style="color: var(--muted); font-size: 0.82rem;">No coverage areas currently allocated to this unit.</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Footer Actions -->
+        <div style="padding: 1.2rem 2rem; background: var(--paper); border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.8rem;">
+            <div style="font-size: 0.78rem; color: var(--muted);">
+                Need to modify official details or sector boundaries? Contact the system administrator.
+            </div>
+
+            <div style="display: flex; gap: 0.6rem;">
+                <a href="/myapp/dept_change_password/"
+                   onmouseover="this.style.background='var(--paper)'; this.style.borderColor='var(--ink)';"
+                   onmouseout="this.style.background='#fff'; this.style.borderColor='var(--line)';"
+                   style="border: 1px solid var(--line); background: #fff; color: var(--ink); border-radius: 9px; padding: 0.55rem 1rem; font-size: 0.82rem; font-weight: 600; text-decoration: none; transition: all 0.15s; display: inline-flex; align-items: center; gap: 0.4rem;">
+                    <svg style="width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2;" viewBox="0 0 24 24">
+                        <circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3"/>
+                    </svg>
+                    Change Password
+                </a>
+
+                <a href="/myapp/department_home/"
+                   onmouseover="this.style.background='var(--indigo)'"
+                   onmouseout="this.style.background='var(--ink)'"
+                   style="border: 0; background: var(--ink); color: #fff; border-radius: 9px; padding: 0.55rem 1.1rem; font-size: 0.82rem; font-weight: 600; text-decoration: none; transition: background 0.15s; display: inline-flex; align-items: center; gap: 0.4rem;">
+                    Back to Terminal
+                </a>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

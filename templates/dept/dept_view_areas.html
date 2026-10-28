@@ -1,0 +1,189 @@
+{% extends 'dept/department_home.html' %}
+{% block body %}
+
+<div style="grid-column: 1 / -1; width: 100%; max-width: 1400px; margin: 0 auto; font-family: var(--font);">
+
+    <!-- Header Section -->
+    <div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <div style="font-size: 0.8rem; color: var(--muted); margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.4rem;">
+                <a href="/myapp/department_home/" style="color: var(--muted); text-decoration: none;">Tactical Terminal</a>
+                <span>/</span>
+                <span style="color: var(--ink); font-weight: 600;">Jurisdiction</span>
+                <span>/</span>
+                <span style="color: var(--ink); font-weight: 600;">View Own Areas</span>
+            </div>
+            <h2 style="font-size: 1.35rem; font-weight: 600; letter-spacing: -0.02em; color: var(--ink); margin: 0; display: flex; align-items: center; gap: 0.65rem;">
+                <svg style="width: 22px; height: 22px; stroke: var(--indigo); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;" viewBox="0 0 24 24">
+                    <path d="M12 21s7-6 7-11.5A7 7 0 005 9.5C5 15 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>
+                </svg>
+                Assigned Jurisdiction Sectors
+            </h2>
+            <p style="margin: 0.35rem 0 0; color: var(--muted); font-size: 0.88rem;">
+                Perimeter sectors, crowd capacity benchmarks, and mounted CCTV camera streams under {{ dept.department_code }}.
+            </p>
+        </div>
+
+        <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
+            <div style="background: #fff; border: 1px solid var(--line); border-radius: 50px; padding: 0.45rem 1rem; font-size: 0.82rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
+                <i style="width: 7px; height: 7px; border-radius: 50%; background: var(--indigo); display: inline-block;"></i>
+                <span style="color: var(--muted);">Assigned Sectors:</span>
+                <span style="color: var(--indigo); font-feature-settings: 'tnum'; font-weight: 700;">{{ total_assigned_areas }}</span>
+            </div>
+
+            {% if high_risk_count > 0 %}
+            <div style="background: #fff; border: 1px solid rgba(255,77,77,0.3); border-radius: 50px; padding: 0.45rem 1rem; font-size: 0.82rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
+                <i style="width: 7px; height: 7px; border-radius: 50%; background: var(--hot); animation: blink 1.4s infinite; display: inline-block;"></i>
+                <span style="color: var(--hot);">Elevated Risk Zones: {{ high_risk_count }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Main Table Card -->
+    <section style="background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 1.6rem 1.8rem; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+
+        <!-- Filter & Search Toolbar -->
+        <form method="GET" style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; margin-bottom: 1.4rem; padding-bottom: 1.2rem; border-bottom: 1px solid var(--line);">
+            
+            <div style="flex: 1; min-width: 250px; display: flex; align-items: center; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 0 0.8rem;">
+                <svg style="width: 15px; height: 15px; stroke: var(--muted); fill: none; stroke-width: 2; stroke-linecap: round; margin-right: 0.5rem;" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input
+                    type="text"
+                    name="search"
+                    placeholder="Search by sector name, city, or district..."
+                    value="{{ search_query }}"
+                    style="width: 100%; border: 0; background: transparent; padding: 0.65rem 0; font-family: inherit; font-size: 0.85rem; color: var(--ink); outline: none;"
+                >
+            </div>
+
+            <div style="min-width: 170px;">
+                <select name="risk" style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.65rem 0.85rem; font-family: inherit; font-size: 0.85rem; color: var(--ink); outline: none;">
+                    <option value="">All Risk Levels</option>
+                    <option value="LOW" {% if risk_filter == 'LOW' or risk_filter == 'Low' %}selected{% endif %}>Low Risk</option>
+                    <option value="MEDIUM" {% if risk_filter == 'MEDIUM' or risk_filter == 'Medium' %}selected{% endif %}>Medium Risk</option>
+                    <option value="HIGH" {% if risk_filter == 'HIGH' or risk_filter == 'High' %}selected{% endif %}>High Risk</option>
+                </select>
+            </div>
+
+            <button type="submit"
+                onmouseover="this.style.background='var(--indigo)'"
+                onmouseout="this.style.background='var(--ink)'"
+                style="border: 0; border-radius: 10px; padding: 0.65rem 1.1rem; font-weight: 600; font-size: 0.84rem; cursor: pointer; background: var(--ink); color: #fff; transition: background 0.2s; font-family: inherit;">
+                Filter
+            </button>
+
+            {% if search_query or risk_filter %}
+                <a href="{% url 'dept_view_areas' %}"
+                   onmouseover="this.style.borderColor='var(--ink)'"
+                   onmouseout="this.style.borderColor='var(--line)'"
+                   style="border: 1px solid var(--line); background: #fff; color: var(--muted); border-radius: 10px; padding: 0.6rem 0.9rem; font-size: 0.84rem; font-weight: 600; text-decoration: none; transition: border-color 0.2s;">
+                    Clear
+                </a>
+            {% endif %}
+
+        </form>
+
+        <!-- Sectors Table -->
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.86rem;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--line);">
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Sector Name</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Administrative Division</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Max Capacity</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">GPS Centerpoint</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">CCTV Units</th>
+                        <th style="text-align: right; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Current Threat Level</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for area in areas %}
+                    <tr onmouseover="this.style.background='#f8f9fd'" onmouseout="this.style.background='transparent'" style="border-bottom: 1px solid var(--line); transition: background 0.15s;">
+                        
+                        <!-- Sector Name & Description -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: top;">
+                            <div style="font-weight: 700; color: var(--ink); font-size: 0.92rem;">
+                                {{ area.name }}
+                            </div>
+                            {% if area.description %}
+                                <div style="font-size: 0.76rem; color: var(--muted); margin-top: 0.2rem; max-width: 320px; line-height: 1.4;">
+                                    {{ area.description }}
+                                </div>
+                            {% endif %}
+                        </td>
+
+                        <!-- Administrative Region -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: top;">
+                            <div style="color: var(--ink); font-weight: 500;">
+                                {{ area.city|default:"-" }}, {{ area.district|default:"-" }}
+                            </div>
+                            <div style="font-size: 0.76rem; color: var(--muted);">
+                                {{ area.state|default:"Kerala" }} {% if area.pincode %} · PIN: {{ area.pincode }}{% endif %}
+                            </div>
+                        </td>
+
+                        <!-- Capacity Benchmark -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: top; white-space: nowrap;">
+                            <div style="font-weight: 700; color: var(--ink); font-feature-settings: 'tnum'; font-size: 0.95rem;">
+                                {{ area.max_crowd_capacity }}
+                            </div>
+                            <div style="font-size: 0.74rem; color: var(--muted);">Threshold Limit</div>
+                        </td>
+
+                        <!-- Coordinates -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: top; white-space: nowrap;">
+                            {% if area.latitude and area.longitude %}
+                                <div style="font-family: monospace; font-size: 0.8rem; color: var(--ink);">
+                                    📍 {{ area.latitude|floatformat:4 }}, {{ area.longitude|floatformat:4 }}
+                                </div>
+                            {% else %}
+                                <span style="color: var(--muted); font-size: 0.78rem;">Coordinates Pending</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Camera Feeds In Area -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: top;">
+                            <div style="display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.76rem; font-weight: 600; background: #eef1f8; color: var(--indigo); border-radius: 50px; padding: 0.2rem 0.65rem;">
+                                <svg style="width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2;" viewBox="0 0 24 24">
+                                    <path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                                </svg>
+                                {{ area.camera_count }} Mounted Cam{{ area.camera_count|pluralize }}
+                            </div>
+                        </td>
+
+                        <!-- Risk Badge -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: top; text-align: right; white-space: nowrap;">
+                            {% if area.current_risk_level == 'HIGH' or area.current_risk_level == 'Critical' or area.current_risk_level == 'High' %}
+                                <span style="display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.25rem 0.75rem; background: #ffe3e3; color: #c12525; box-shadow: 0 0 0 1px rgba(255, 77, 77, 0.25);">
+                                    <i style="width: 6px; height: 6px; border-radius: 50%; background: var(--hot); display: inline-block;"></i> High Threat
+                                </span>
+                            {% elif area.current_risk_level == 'MEDIUM' or area.current_risk_level == 'Medium' %}
+                                <span style="display: inline-block; font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.25rem 0.75rem; background: #fff0d9; color: #a8650a;">
+                                    Medium Flux
+                                </span>
+                            {% else %}
+                                <span style="display: inline-block; font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.25rem 0.75rem; background: #dff7f0; color: #0b6b57;">
+                                    Normal Safe
+                                </span>
+                            {% endif %}
+                        </td>
+
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 3rem 1rem; color: var(--muted); font-size: 0.88rem;">
+                            No assigned sectors found matching your filter criteria.
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+</div>
+
+{% endblock %}

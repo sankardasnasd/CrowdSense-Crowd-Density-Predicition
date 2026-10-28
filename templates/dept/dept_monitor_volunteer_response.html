@@ -1,0 +1,436 @@
+{% extends 'dept/department_home.html' %}
+{% block body %}
+
+<div style="grid-column: 1 / -1; width: 100%; max-width: 1440px; margin: 0 auto; font-family: var(--font);">
+
+    <!-- Header Section -->
+    <div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <div style="font-size: 0.8rem; color: var(--muted); margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.4rem;">
+                <a href="/myapp/department_home/" style="color: var(--muted); text-decoration: none;">Tactical Terminal</a>
+                <span>/</span>
+                <span style="color: var(--ink); font-weight: 600;">Volunteer Dispatch</span>
+                <span>/</span>
+                <span style="color: var(--ink); font-weight: 600;">Monitor Volunteer Response</span>
+            </div>
+            <h2 style="font-size: 1.35rem; font-weight: 600; letter-spacing: -0.02em; color: var(--ink); margin: 0; display: flex; align-items: center; gap: 0.65rem;">
+                <svg style="width: 22px; height: 22px; stroke: var(--indigo); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;" viewBox="0 0 24 24">
+                    <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                </svg>
+                Volunteer Response Telemetry & Ground Reports
+            </h2>
+            <p style="margin: 0.35rem 0 0; color: var(--muted); font-size: 0.88rem;">
+                Live volunteer acknowledgement statuses, situational field reports, and mission completion times for {{ dept.department_code }}.
+            </p>
+        </div>
+
+        <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
+            <a href="/myapp/dept_assign_tasks/"
+               onmouseover="this.style.background='var(--indigo)'"
+               onmouseout="this.style.background='var(--ink)'"
+               style="border: 0; background: var(--ink); color: #fff; border-radius: 9px; padding: 0.5rem 1rem; font-size: 0.82rem; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; transition: background 0.15s;">
+                <svg style="width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2;" viewBox="0 0 24 24">
+                    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Assign New Task
+            </a>
+        </div>
+    </div>
+
+    <!-- 4 High-Level Deployment KPI Cards -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.6rem;">
+        
+        <!-- Pending Volunteer Response -->
+        <div style="background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 1.25rem; position: relative; overflow: hidden; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--hot);"></div>
+            <div style="font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Awaiting Acceptance</div>
+            <div style="font-size: 2.1rem; font-weight: 700; color: var(--hot); margin: 0.3rem 0 0.1rem; font-feature-settings: 'tnum';">
+                {{ pending_tasks }}
+            </div>
+            <div style="font-size: 0.76rem; color: var(--muted);">Dispatched but unacknowledged</div>
+        </div>
+
+        <!-- Active in Progress -->
+        <div style="background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 1.25rem; position: relative; overflow: hidden; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--amber);"></div>
+            <div style="font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Active On Ground</div>
+            <div style="font-size: 2.1rem; font-weight: 700; color: var(--amber); margin: 0.3rem 0 0.1rem; font-feature-settings: 'tnum';">
+                {{ active_deployments }}
+            </div>
+            <div style="font-size: 0.76rem; color: var(--muted);">Accepted or in progress</div>
+        </div>
+
+        <!-- Successfully Completed -->
+        <div style="background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 1.25rem; position: relative; overflow: hidden; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--calm);"></div>
+            <div style="font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Tasks Completed</div>
+            <div style="font-size: 2.1rem; font-weight: 700; color: var(--calm); margin: 0.3rem 0 0.1rem; font-feature-settings: 'tnum';">
+                {{ completed_tasks }}
+            </div>
+            <div style="font-size: 0.76rem; color: var(--muted);">Directives fully executed</div>
+        </div>
+
+        <!-- Declined Tasks -->
+        <div style="background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 1.25rem; position: relative; overflow: hidden; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: #cdd4e5;"></div>
+            <div style="font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Declined Directives</div>
+            <div style="font-size: 2.1rem; font-weight: 700; color: var(--muted); margin: 0.3rem 0 0.1rem; font-feature-settings: 'tnum';">
+                {{ declined_tasks }}
+            </div>
+            <div style="font-size: 0.76rem; color: var(--muted);">Requires reassignment to other units</div>
+        </div>
+
+    </div>
+
+    <!-- Main Live Task Monitoring Table Card -->
+    <section style="background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 1.6rem 1.8rem; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03); margin-bottom: 2rem;">
+        
+        <!-- Filter Toolbar -->
+        <form method="GET" style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; margin-bottom: 1.4rem; padding-bottom: 1.2rem; border-bottom: 1px solid var(--line);">
+            
+            <div style="flex: 1; min-width: 220px; display: flex; align-items: center; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 0 0.8rem;">
+                <svg style="width: 15px; height: 15px; stroke: var(--muted); fill: none; stroke-width: 2; stroke-linecap: round; margin-right: 0.5rem;" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input
+                    type="text"
+                    name="search"
+                    placeholder="Search volunteer name, phone, task title, or instruction..."
+                    value="{{ search_query }}"
+                    style="width: 100%; border: 0; background: transparent; padding: 0.65rem 0; font-family: inherit; font-size: 0.85rem; color: var(--ink); outline: none;"
+                >
+            </div>
+
+            <div style="min-width: 180px;">
+                <select name="status" style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.65rem 0.85rem; font-family: inherit; font-size: 0.84rem; color: var(--ink); outline: none;">
+                    <option value="">All Response Statuses</option>
+                    {% for code, label in status_choices %}
+                        <option value="{{ code }}" {% if status_filter == code %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="min-width: 180px;">
+                <select name="alert" style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.65rem 0.85rem; font-family: inherit; font-size: 0.84rem; color: var(--ink); outline: none;">
+                    <option value="">All Emergencies</option>
+                    {% for a in department_alerts %}
+                        <option value="{{ a.id }}" {% if alert_filter == a.id|stringformat:"s" %}selected{% endif %}>
+                            {{ a.title|truncatechars:26 }} ({{ a.area.name }})
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="min-width: 135px;">
+                <input type="date" name="date" value="{{ date_filter }}"
+                    style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.55rem 0.65rem; font-family: inherit; font-size: 0.82rem; color: var(--ink); outline: none; box-sizing: border-box;">
+            </div>
+
+            <button type="submit"
+                onmouseover="this.style.background='var(--indigo)'"
+                onmouseout="this.style.background='var(--ink)'"
+                style="border: 0; border-radius: 10px; padding: 0.65rem 1.1rem; font-weight: 600; font-size: 0.84rem; cursor: pointer; background: var(--ink); color: #fff; transition: background 0.2s; font-family: inherit;">
+                Filter
+            </button>
+
+            {% if status_filter or alert_filter or search_query or date_filter %}
+                <a href="{% url 'dept_monitor_volunteer_response' %}"
+                   onmouseover="this.style.borderColor='var(--ink)'"
+                   onmouseout="this.style.borderColor='var(--line)'"
+                   style="border: 1px solid var(--line); background: #fff; color: var(--muted); border-radius: 10px; padding: 0.6rem 0.9rem; font-size: 0.84rem; font-weight: 600; text-decoration: none; transition: border-color 0.2s;">
+                    Clear
+                </a>
+            {% endif %}
+
+        </form>
+
+        <!-- Tasks Telemetry Table -->
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.86rem;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--line);">
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Assigned Time</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Assigned Volunteer</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Emergency Incident & Task</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Response Timestamps</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Status</th>
+                        <th style="text-align: right; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Ground Situation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for task in tasks %}
+                    <tr onmouseover="this.style.background='#f8f9fd'" onmouseout="this.style.background='transparent'" style="border-bottom: 1px solid var(--line); transition: background 0.15s;">
+                        
+                        <!-- Assigned Time -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: top; white-space: nowrap;">
+                            <div style="font-weight: 600; color: var(--ink); font-feature-settings: 'tnum'; font-size: 0.84rem;">
+                                {{ task.assigned_at|date:"H:i:s" }}
+                            </div>
+                            <div style="font-size: 0.76rem; color: var(--muted);">
+                                {{ task.assigned_at|date:"M d, Y" }}
+                            </div>
+                        </td>
+
+                        <!-- Volunteer -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: top;">
+                            <div style="font-weight: 700; color: var(--ink);">
+                                {{ task.volunteer.name }}
+                            </div>
+                            <div style="font-size: 0.76rem; color: var(--muted);">
+                                📞 {{ task.volunteer.phone }}
+                            </div>
+                            {% if task.volunteer.place %}
+                                <div style="font-size: 0.72rem; color: var(--muted);">
+                                    📍 {{ task.volunteer.place }}
+                                </div>
+                            {% endif %}
+                        </td>
+
+                        <!-- Emergency & Task -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: top;">
+                            <div style="font-weight: 700; color: var(--ink); font-size: 0.9rem;">
+                                {{ task.title }}
+                            </div>
+                            <div style="font-size: 0.78rem; color: var(--muted); margin-top: 0.15rem; max-width: 320px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
+                                {{ task.instruction }}
+                            </div>
+                            <div style="margin-top: 0.25rem;">
+                                <span style="display: inline-block; font-size: 0.7rem; font-weight: 600; background: #e8e9ff; color: var(--indigo); border-radius: 50px; padding: 0.05rem 0.5rem;">
+                                    Incident: {{ task.alert.title|truncatechars:28 }} ({{ task.alert.area.name }})
+                                </span>
+                            </div>
+                        </td>
+
+                        <!-- Response Timestamps -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: top; white-space: nowrap;">
+                            {% if task.responded_at %}
+                                <div style="font-size: 0.78rem; color: var(--ink);">
+                                    Responded: <strong style="font-feature-settings: 'tnum';">{{ task.responded_at|date:"H:i" }}</strong>
+                                </div>
+                            {% else %}
+                                <div style="font-size: 0.76rem; color: var(--hot); font-style: italic;">
+                                    Awaiting Response
+                                </div>
+                            {% endif %}
+
+                            {% if task.completed_at %}
+                                <div style="font-size: 0.76rem; color: #0b6b57; margin-top: 0.2rem;">
+                                    Completed: <strong style="font-feature-settings: 'tnum';">{{ task.completed_at|date:"H:i" }}</strong>
+                                </div>
+                            {% endif %}
+                        </td>
+
+                        <!-- Status Badge -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: top;">
+                            {% if task.status == 'COMPLETED' %}
+                                <span style="display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.2rem 0.65rem; background: #dff7f0; color: #0b6b57;">
+                                    <i style="width: 6px; height: 6px; border-radius: 50%; background: var(--calm); display: inline-block;"></i> Completed
+                                </span>
+                            {% elif task.status == 'IN_PROGRESS' %}
+                                <span style="display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.2rem 0.65rem; background: #fff0d9; color: #a8650a;">
+                                    <i style="width: 6px; height: 6px; border-radius: 50%; background: var(--amber); display: inline-block;"></i> In Progress
+                                </span>
+                            {% elif task.status == 'ACCEPTED' %}
+                                <span style="display: inline-block; font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.2rem 0.65rem; background: #e8e9ff; color: var(--indigo);">
+                                    Accepted
+                                </span>
+                            {% elif task.status == 'DECLINED' %}
+                                <span style="display: inline-block; font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.2rem 0.65rem; background: #ffe3e3; color: #c12525;">
+                                    Declined
+                                </span>
+                            {% else %}
+                                <span style="display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.2rem 0.65rem; background: #ffe3e3; color: #c12525;">
+                                    <i style="width: 6px; height: 6px; border-radius: 50%; background: var(--hot); display: inline-block;"></i> Pending Response
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Ground Reports Count & Action Modal -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: top; text-align: right; white-space: nowrap;">
+                            {% with rep_count=task.ground_reports.count %}
+                                {% if rep_count > 0 %}
+                                    <button type="button"
+                                        onclick="openTaskReportsModal('{{ task.id }}', '{{ task.title|escapejs }}', '{{ task.volunteer.name|escapejs }}', '{{ task.volunteer.phone|escapejs }}', '{{ task.status }}')"
+                                        onmouseover="this.style.background='var(--indigo)'; this.style.color='#fff';"
+                                        onmouseout="this.style.background='#e8e9ff'; this.style.color='var(--indigo)';"
+                                        style="border: 0; background: #e8e9ff; color: var(--indigo); border-radius: 8px; padding: 0.4rem 0.75rem; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.15s; font-family: inherit; display: inline-flex; align-items: center; gap: 0.35rem;">
+                                        📢 {{ rep_count }} Field Report{{ rep_count|pluralize }}
+                                    </button>
+                                {% else %}
+                                    <button type="button"
+                                        onclick="openDirectiveModal('{{ task.title|escapejs }}', '{{ task.volunteer.name|escapejs }}', '{{ task.volunteer.phone|escapejs }}', '{{ task.instruction|escapejs }}', '{{ task.status }}', '{{ task.assigned_at|date:"M d, Y H:i" }}')"
+                                        onmouseover="this.style.borderColor='var(--indigo)'; this.style.color='var(--indigo)';"
+                                        onmouseout="this.style.borderColor='var(--line)'; this.style.color='var(--ink)';"
+                                        style="border: 1px solid var(--line); background: #fff; color: var(--ink); border-radius: 8px; padding: 0.35rem 0.65rem; font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: all 0.15s; font-family: inherit;">
+                                        View Task
+                                    </button>
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 3.5rem 1rem; color: var(--muted); font-size: 0.88rem;">
+                            No dispatched volunteer tasks found matching your filter criteria.
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- SECTION 2: RECENT GROUND SITUATION REPORTS STREAM -->
+    <section style="background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 1.6rem 1.8rem; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem;">
+            <div>
+                <h3 style="font-size: 1.12rem; font-weight: 600; color: var(--ink); margin: 0; letter-spacing: -0.02em;">
+                    Incoming Field Ground Reports Feed
+                </h3>
+                <p style="color: var(--muted); font-size: 0.82rem; margin: 0.15rem 0 0;">
+                    Real-time situational updates and photo evidence uploaded by volunteers from incident scenes.
+                </p>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 1.2rem;">
+            {% for report in recent_reports %}
+                <div style="background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 1.2rem; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.6rem;">
+                            <div>
+                                <span style="font-weight: 700; color: var(--ink); font-size: 0.92rem;">{{ report.volunteer.name }}</span>
+                                <div style="font-size: 0.74rem; color: var(--muted);">📞 {{ report.volunteer.phone }} · 📍 {{ report.alert.area.name }}</div>
+                            </div>
+                            <span style="font-size: 0.72rem; color: var(--muted); font-feature-settings: 'tnum';">
+                                {{ report.reported_at|date:"H:i" }} hrs
+                            </span>
+                        </div>
+
+                        <!-- Update Message Body -->
+                        <div style="font-size: 0.86rem; color: var(--ink); line-height: 1.5; margin-bottom: 0.8rem; background: #fff; padding: 0.8rem 0.9rem; border-radius: 10px; border: 1px solid var(--line);">
+                            {{ report.situation_update }}
+                        </div>
+                    </div>
+
+                    <!-- Evidence Photo & Task Reference -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed var(--line); padding-top: 0.6rem; font-size: 0.76rem;">
+                        <span style="color: var(--indigo); font-weight: 600;">
+                            {% if report.task %}Task: {{ report.task.title|truncatechars:22 }}{% else %}General Scene Update{% endif %}
+                        </span>
+
+                        {% if report.attached_image %}
+                            <button type="button"
+                                onclick="openReportImageModal('{{ report.attached_image.url }}', '{{ report.volunteer.name|escapejs }}', '{{ report.reported_at|date:"M d, Y H:i" }}', '{{ report.situation_update|escapejs }}')"
+                                style="border: 0; background: transparent; color: var(--indigo); font-weight: 700; cursor: pointer; text-decoration: underline; font-family: inherit;">
+                                📷 View Photo
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+            {% empty %}
+                <div style="grid-column: 1 / -1; text-align: center; padding: 2rem 1rem; color: var(--muted); font-size: 0.85rem;">
+                    No field ground reports submitted yet for active incidents.
+                </div>
+            {% endfor %}
+        </div>
+    </section>
+
+</div>
+
+<!-- Directive Detail Modal -->
+<div id="directiveModal" style="display: none; position: fixed; inset: 0; background: rgba(10, 15, 36, 0.65); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; padding: 1.5rem;">
+    <div style="background: #fff; border-radius: 18px; max-width: 600px; width: 100%; overflow: hidden; box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35); border: 1px solid var(--line); animation: fadeIn 0.2s ease;">
+        <div style="padding: 1.2rem 1.6rem; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center;">
+            <h3 id="modalDirTitle" style="font-size: 1.15rem; font-weight: 700; color: var(--ink); margin: 0;"></h3>
+            <button type="button" onclick="closeDirectiveModal()" style="border: 0; background: var(--paper); border-radius: 50%; width: 32px; height: 32px; cursor: pointer; display: grid; place-items: center; color: var(--ink); font-weight: bold;">✕</button>
+        </div>
+        <div style="padding: 1.6rem;">
+            <div style="background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 0.9rem 1.1rem; margin-bottom: 1.2rem; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.8rem; font-size: 0.82rem;">
+                <div>
+                    <div style="color: var(--muted); font-size: 0.74rem;">Assigned Volunteer</div>
+                    <div id="modalDirVol" style="font-weight: 700; color: var(--ink);"></div>
+                </div>
+                <div>
+                    <div style="color: var(--muted); font-size: 0.74rem;">Assigned Time</div>
+                    <div id="modalDirTime" style="font-weight: 600; color: var(--indigo);"></div>
+                </div>
+                <div>
+                    <div style="color: var(--muted); font-size: 0.74rem;">Current State</div>
+                    <div id="modalDirStatus" style="font-weight: 700; color: var(--ink);"></div>
+                </div>
+            </div>
+
+            <div>
+                <label style="display: block; font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.4rem;">
+                    Tactical Directive Instructions
+                </label>
+                <div id="modalDirInstruction" style="font-size: 0.88rem; color: var(--ink); background: #fbfcfe; padding: 1rem; border-radius: 10px; line-height: 1.5; border: 1px solid var(--line);"></div>
+            </div>
+        </div>
+        <div style="padding: 1rem 1.6rem; background: var(--paper); border-top: 1px solid var(--line); display: flex; justify-content: flex-end;">
+            <button type="button" onclick="closeDirectiveModal()"
+                style="border: 0; background: var(--ink); color: #fff; border-radius: 8px; padding: 0.55rem 1.2rem; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit;">
+                Close
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Ground Photo Inspection Modal -->
+<div id="reportPhotoModal" style="display: none; position: fixed; inset: 0; background: rgba(10, 15, 36, 0.65); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; padding: 1.5rem;">
+    <div style="background: #fff; border-radius: 18px; max-width: 680px; width: 100%; overflow: hidden; box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35); border: 1px solid var(--line); animation: fadeIn 0.2s ease;">
+        <div style="padding: 1.2rem 1.6rem; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h3 id="photoModalVol" style="font-size: 1.1rem; font-weight: 700; color: var(--ink); margin: 0;"></h3>
+                <div id="photoModalMeta" style="font-size: 0.76rem; color: var(--muted); margin-top: 0.15rem;"></div>
+            </div>
+            <button type="button" onclick="closeReportPhotoModal()" style="border: 0; background: var(--paper); border-radius: 50%; width: 32px; height: 32px; cursor: pointer; display: grid; place-items: center; color: var(--ink); font-weight: bold;">✕</button>
+        </div>
+        <div style="padding: 1rem; background: #0a0f24; display: grid; place-items: center; min-height: 340px;">
+            <img id="photoModalImg" src="" alt="Ground Evidence" style="max-width: 100%; max-height: 480px; object-fit: contain; border-radius: 8px;">
+        </div>
+        <div style="padding: 1rem 1.6rem; background: var(--paper); border-top: 1px solid var(--line);">
+            <div id="photoModalDesc" style="font-size: 0.84rem; color: var(--ink); line-height: 1.45;"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openDirectiveModal(title, volunteer, phone, instruction, status, assignedAt) {
+        document.getElementById('modalDirTitle').textContent = title;
+        document.getElementById('modalDirVol').textContent = volunteer + ' (' + phone + ')';
+        document.getElementById('modalDirTime').textContent = assignedAt;
+        document.getElementById('modalDirStatus').textContent = status;
+        document.getElementById('modalDirInstruction').textContent = instruction;
+        document.getElementById('directiveModal').style.display = 'flex';
+    }
+
+    function closeDirectiveModal() {
+        document.getElementById('directiveModal').style.display = 'none';
+    }
+
+    function openReportImageModal(imageUrl, volunteer, timestamp, updateText) {
+        document.getElementById('photoModalImg').src = imageUrl;
+        document.getElementById('photoModalVol').textContent = 'Field Photo by ' + volunteer;
+        document.getElementById('photoModalMeta').textContent = 'Uploaded: ' + timestamp;
+        document.getElementById('photoModalDesc').textContent = updateText;
+        document.getElementById('reportPhotoModal').style.display = 'flex';
+    }
+
+    function closeReportPhotoModal() {
+        document.getElementById('reportPhotoModal').style.display = 'none';
+        document.getElementById('photoModalImg').src = '';
+    }
+
+    document.getElementById('directiveModal').addEventListener('click', function(e) {
+        if (e.target === this) closeDirectiveModal();
+    });
+
+    document.getElementById('reportPhotoModal').addEventListener('click', function(e) {
+        if (e.target === this) closeReportPhotoModal();
+    });
+</script>
+
+{% endblock %}

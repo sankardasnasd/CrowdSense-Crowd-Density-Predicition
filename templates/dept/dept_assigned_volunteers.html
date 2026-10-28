@@ -1,0 +1,227 @@
+{% extends 'dept/department_home.html' %}
+{% block body %}
+
+<div style="grid-column: 1 / -1; width: 100%; max-width: 1440px; margin: 0 auto; font-family: var(--font);">
+
+    <!-- Header & Breadcrumbs -->
+    <div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <div style="font-size: 0.8rem; color: var(--muted); margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.4rem;">
+                <a href="/myapp/department_home/" style="color: var(--muted); text-decoration: none;">Tactical Terminal</a>
+                <span>/</span>
+                <span style="color: var(--ink); font-weight: 600;">Volunteer Dispatch</span>
+                <span>/</span>
+                <span style="color: var(--ink); font-weight: 600;">Assigned Volunteers</span>
+            </div>
+            <h2 style="font-size: 1.35rem; font-weight: 600; letter-spacing: -0.02em; color: var(--ink); margin: 0; display: flex; align-items: center; gap: 0.65rem;">
+                <svg style="width: 22px; height: 22px; stroke: var(--indigo); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;" viewBox="0 0 24 24">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+                Assigned Emergency Response Volunteers
+            </h2>
+            <p style="margin: 0.35rem 0 0; color: var(--muted); font-size: 0.88rem;">
+                Registered field volunteers attached to {{ dept.department_name }} ({{ dept.department_code }}).
+            </p>
+        </div>
+
+        <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
+            <div style="background: #fff; border: 1px solid var(--line); border-radius: 50px; padding: 0.4rem 1rem; font-size: 0.82rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
+                <i style="width: 7px; height: 7px; border-radius: 50%; background: var(--calm); display: inline-block;"></i>
+                <span style="color: var(--muted);">Ready for Dispatch:</span>
+                <span style="color: var(--indigo); font-feature-settings: 'tnum'; font-weight: 700;">{{ available_count }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4 Triage Metric Cards -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.6rem;">
+        
+        <!-- Total Enrolled Volunteers -->
+        <div style="background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 1.25rem; position: relative; overflow: hidden; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--indigo);"></div>
+            <div style="font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Total Volunteers</div>
+            <div style="font-size: 2.1rem; font-weight: 700; color: var(--ink); margin: 0.3rem 0 0.1rem; font-feature-settings: 'tnum';">
+                {{ total_volunteers }}
+            </div>
+            <div style="font-size: 0.76rem; color: var(--muted);">Enrolled under this department</div>
+        </div>
+
+        <!-- Available (Standby) -->
+        <div style="background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 1.25rem; position: relative; overflow: hidden; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--calm);"></div>
+            <div style="font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Available on Standby</div>
+            <div style="font-size: 2.1rem; font-weight: 700; color: var(--calm); margin: 0.3rem 0 0.1rem; font-feature-settings: 'tnum';">
+                {{ available_count }}
+            </div>
+            <div style="font-size: 0.76rem; color: var(--muted);">Ready for immediate assignment</div>
+        </div>
+
+        <!-- On-Duty (Active) -->
+        <div style="background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 1.25rem; position: relative; overflow: hidden; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--amber);"></div>
+            <div style="font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Currently On Duty</div>
+            <div style="font-size: 2.1rem; font-weight: 700; color: var(--amber); margin: 0.3rem 0 0.1rem; font-feature-settings: 'tnum';">
+                {{ on_duty_count }}
+            </div>
+            <div style="font-size: 0.76rem; color: var(--muted);">Active in sector field tasks</div>
+        </div>
+
+        <!-- Off Duty -->
+        <div style="background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 1.25rem; position: relative; overflow: hidden; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: #cdd4e5;"></div>
+            <div style="font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Off Duty / Resting</div>
+            <div style="font-size: 2.1rem; font-weight: 700; color: var(--muted); margin: 0.3rem 0 0.1rem; font-feature-settings: 'tnum';">
+                {{ off_duty_count }}
+            </div>
+            <div style="font-size: 0.76rem; color: var(--muted);">Currently off deployment</div>
+        </div>
+
+    </div>
+
+    <!-- Main Table Section -->
+    <section style="background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 1.6rem 1.8rem; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+
+        <!-- Filter & Search Bar -->
+        <form method="GET" style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; margin-bottom: 1.4rem; padding-bottom: 1.2rem; border-bottom: 1px solid var(--line);">
+            
+            <div style="flex: 1; min-width: 250px; display: flex; align-items: center; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 0 0.8rem;">
+                <svg style="width: 15px; height: 15px; stroke: var(--muted); fill: none; stroke-width: 2; stroke-linecap: round; margin-right: 0.5rem;" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input
+                    type="text"
+                    name="search"
+                    placeholder="Search by volunteer name, phone, email, or place..."
+                    value="{{ search_query }}"
+                    style="width: 100%; border: 0; background: transparent; padding: 0.65rem 0; font-family: inherit; font-size: 0.85rem; color: var(--ink); outline: none;"
+                >
+            </div>
+
+            <div style="min-width: 180px;">
+                <select name="status" style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.65rem 0.85rem; font-family: inherit; font-size: 0.85rem; color: var(--ink); outline: none;">
+                    <option value="">All Duty States</option>
+                    <option value="AVAILABLE" {% if status_filter == 'AVAILABLE' %}selected{% endif %}>Available (Standby)</option>
+                    <option value="ON_DUTY" {% if status_filter == 'ON_DUTY' %}selected{% endif %}>On Duty (Active)</option>
+                    <option value="OFF_DUTY" {% if status_filter == 'OFF_DUTY' %}selected{% endif %}>Off Duty</option>
+                </select>
+            </div>
+
+            <button type="submit"
+                onmouseover="this.style.background='var(--indigo)'"
+                onmouseout="this.style.background='var(--ink)'"
+                style="border: 0; border-radius: 10px; padding: 0.65rem 1.1rem; font-weight: 600; font-size: 0.84rem; cursor: pointer; background: var(--ink); color: #fff; transition: background 0.2s; font-family: inherit;">
+                Filter
+            </button>
+
+            {% if search_query or status_filter %}
+                <a href="{% url 'dept_assigned_volunteers' %}"
+                   onmouseover="this.style.borderColor='var(--ink)'"
+                   onmouseout="this.style.borderColor='var(--line)'"
+                   style="border: 1px solid var(--line); background: #fff; color: var(--muted); border-radius: 10px; padding: 0.6rem 0.9rem; font-size: 0.84rem; font-weight: 600; text-decoration: none; transition: border-color 0.2s;">
+                    Clear
+                </a>
+            {% endif %}
+
+        </form>
+
+        <!-- Table Listing -->
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.86rem;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--line);">
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Volunteer Personnel</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Contact & Communication</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Assigned Sector / Location</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Duty Status</th>
+                        <th style="text-align: right; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Direct Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for vol in volunteers %}
+                    <tr onmouseover="this.style.background='#f8f9fd'" onmouseout="this.style.background='transparent'" style="border-bottom: 1px solid var(--line); transition: background 0.15s;">
+                        
+                        <!-- Volunteer Identity -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--indigo), var(--mag)); display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 0.85rem; flex-shrink: 0;">
+                                    {{ vol.user.name|slice:":1"|upper }}
+                                </div>
+                                <div>
+                                    <div style="font-weight: 700; color: var(--ink); font-size: 0.9rem;">
+                                        {{ vol.user.name }}
+                                    </div>
+                                    <div style="font-size: 0.74rem; color: var(--muted);">
+                                        Profile #{{ vol.id }}
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Contact Details -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                            <div style="font-weight: 600; color: var(--ink); font-feature-settings: 'tnum'; font-size: 0.84rem;">
+                                📞 {{ vol.user.phone }}
+                            </div>
+                            <div style="font-size: 0.76rem; color: var(--muted);">
+                                ✉️ {{ vol.user.email }}
+                            </div>
+                        </td>
+
+                        <!-- Sector & Place -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                            {% if vol.user.area %}
+                                <span style="display: inline-block; font-size: 0.72rem; font-weight: 600; background: #e8e9ff; color: var(--indigo); border-radius: 50px; padding: 0.1rem 0.55rem; margin-bottom: 0.2rem;">
+                                    📍 {{ vol.user.area.name }}
+                                </span>
+                            {% endif %}
+                            <div style="font-size: 0.78rem; color: var(--muted);">
+                                {{ vol.user.place|default:"Location Unspecified" }}
+                            </div>
+                        </td>
+
+                        <!-- Status Badge -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                            {% if vol.availability_status == 'AVAILABLE' %}
+                                <span style="display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.2rem 0.65rem; background: #dff7f0; color: #0b6b57;">
+                                    <i style="width: 6px; height: 6px; border-radius: 50%; background: var(--calm); display: inline-block;"></i> Available (Standby)
+                                </span>
+                            {% elif vol.availability_status == 'ON_DUTY' %}
+                                <span style="display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.2rem 0.65rem; background: #fff0d9; color: #a8650a;">
+                                    <i style="width: 6px; height: 6px; border-radius: 50%; background: var(--amber); display: inline-block;"></i> On Duty (Active)
+                                </span>
+                            {% else %}
+                                <span style="display: inline-block; font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.2rem 0.65rem; background: #eef1f8; color: var(--muted);">
+                                    Off Duty
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Action Button -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle; text-align: right; white-space: nowrap;">
+                            <a href="/myapp/dept_assign_tasks/?volunteer_id={{ vol.id }}"
+                               onmouseover="this.style.background='var(--indigo)'"
+                               onmouseout="this.style.background='var(--ink)'"
+                               style="border: 0; background: var(--ink); color: #fff; border-radius: 8px; padding: 0.4rem 0.85rem; font-size: 0.78rem; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; transition: background 0.15s;">
+                                <svg style="width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2;" viewBox="0 0 24 24">
+                                    <polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                                </svg>
+                                Assign Task
+                            </a>
+                        </td>
+
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 3.5rem 1rem; color: var(--muted); font-size: 0.88rem;">
+                            No volunteers currently assigned under this department matching the criteria.
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+</div>
+
+{% endblock %}

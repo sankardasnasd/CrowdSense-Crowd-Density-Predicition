@@ -47,4 +47,60 @@ urlpatterns = [
     path('update_alert_status/<int:alert_id>/', views.update_alert_status, name='update_alert_status'),
 
 
-]
+
+    path('department_home/', views.department_home, name='department_home'),
+    path('dept_view_profile/', views.dept_view_profile, name='dept_view_profile'),
+    path('dept_change_password/', views.dept_change_password, name='dept_change_password'),
+    path('dept_view_areas/', views.dept_view_areas, name='dept_view_areas'),
+
+    path('dept_live_density/', views.dept_live_density_console, name='dept_live_density'),
+
+    path('dept_density_maps/', views.dept_density_maps, name='dept_density_maps'),
+    path('dept_view_crowd_count/', views.dept_view_crowd_count, name='dept_view_crowd_count'),
+
+    path('dept_high_density/', views.dept_high_density, name='dept_high_density'),
+    path('dept_view_anomalies/', views.dept_view_anomalies, name='dept_view_anomalies'),
+
+    path('dept_receive_alerts/', views.dept_receive_alerts, name='dept_receive_alerts'),
+    path('dept_acknowledge_alert/<int:alert_id>/', views.dept_acknowledge_alert, name='dept_acknowledge_alert'),
+
+    path('dept_assigned_volunteers/', views.dept_assigned_volunteers, name='dept_assigned_volunteers'),
+    path('dept_assign_tasks/', views.dept_assign_tasks, name='dept_assign_tasks'),
+
+    path('dept_previous_incidents/', views.dept_previous_incidents, name='dept_previous_incidents'),
+
+    path('dept_monitor_volunteer_response/', views.dept_monitor_volunteer_response, name='dept_monitor_volunteer_response'),
+
+
+
+    # flutter=======================================
+
+    path('app_login/', views.app_login, name='app_login'),
+    # path('updatelocation/', views.updatelocation, name='updatelocation'),
+    path('user_view_area/', views.user_view_area, name='user_view_area'),
+    path('user_register/', views.user_register, name='user_register'),
+    path('user_change_password/', views.user_change_password, name='user_change_password'),
+    path('user_view_profile/', views.user_view_profile, name='user_view_profile'),
+    path('user_edit_profile/', views.user_edit_profile, name='user_edit_profile'),
+    path('user_view_emergency_department/', views.user_view_emergency_department, name='user_view_emergency_department'),
+    path('user_view_emergency_alerts/', views.user_view_emergency_alerts, name='user_view_emergency_alerts'),
+
+    path('user_submit_complaint/', views.user_submit_complaint, name='user_submit_complaint'),
+    path('user_view_complaints/', views.user_view_complaints, name='user_view_complaints'),
+
+
+    path('user_submit_feedback/', views.user_submit_feedback, name='user_submit_feedback'),
+    path('user_view_feedback/', views.user_view_feedback, name='user_view_feedback'),
+
+    path('user_add_emergency_report/', views.user_add_emergency_report, name='user_add_emergency_report'),
+    path('user_view_emergency_reports/', views.user_view_emergency_reports, name='user_view_emergency_reports'),
+    path('user_delete_emergency_report/', views.user_delete_emergency_report, name='user_delete_emergency_report'),
+
+
+    path('user_view_emergency_instructions/', views.user_view_emergency_instructions, name='user_view_emergency_instructions'),
+    path('user_view_crowd_density/', views.user_view_crowd_density, name='user_view_crowd_density'),
+
+    path('camera_monitoring/', views.camera_monitoring, name='camera_monitoring'),
+    path("live_crowd_predict/",views.live_crowd_predict,name="live_crowd_predict",),
+
+   ]

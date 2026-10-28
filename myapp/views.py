@@ -1,8 +1,7 @@
-from django.contrib import messages
+from time import timezone
+
 from django.contrib.auth import logout, authenticate, login, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import Group
-from django.shortcuts import render, redirect, get_object_or_404
 
 # Create your views here.
 from myapp.models import *
@@ -27,7 +26,7 @@ def login_page(request):
 
             elif ob.groups.filter(name="Emergency").exists():
                 login(request, ob)
-                return redirect('/myapp/admin_home/')
+                return redirect('/myapp/department_home/')
 
 
             else:
@@ -323,7 +322,7 @@ def admin_delete_area(request, area_id):
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from django.db.models import Q
+from django.db.models import Q, Sum
 from .models import User_Table, Area
 
 def manage_users(request):
@@ -420,6 +419,7 @@ def manage_departments(request):
             contact_number=contact_number,
             helpline_number=helpline_number,
             office_address=office_address,
+            department_email=department_email,
             is_active=True
         )
         dept.save()
@@ -1025,7 +1025,7 @@ def view_complaints(request):
     }
     return render(request, 'admin/view_complaints.html', context)
 
-
+from django.utils import timezone
 def reply_complaint(request, complaint_id):
     if request.method == 'POST':
         complaint = get_object_or_404(Complaint, id=complaint_id)
@@ -1103,3 +1103,2441 @@ def view_feedback(request):
         'date_to': date_to,
     }
     return render(request, 'admin/view_feedback.html', context)
+
+
+
+
+# department===========================
+
+
+@login_required
+def department_home(request):
+    dept = get_object_or_404(EmergencyDepartment.objects.prefetch_related('assigned_areas'), LOGIN=request.user)
+
+    assigned_areas = dept.assigned_areas.all()
+    assigned_area_ids = assigned_areas.values_list('id', flat=True)
+
+    total_areas_count = assigned_areas.count()
+
+    volunteers = VolunteerProfile.objects.filter(emergency_department=dept)
+    total_vols = volunteers.count()
+    on_duty_vols = volunteers.filter(availability_status='ON_DUTY').count()
+    available_vols = volunteers.filter(availability_status='AVAILABLE').count()
+
+    active_alerts = EmergencyAlert.objects.filter(
+        Q(emergency_department=dept) | Q(area_id__in=assigned_area_ids),
+        status__in=['ACTIVE', 'UNDER_CONTROL']
+    ).select_related('area', 'anomaly_log').order_by('-created_at')
+
+    recent_density_logs = CrowdDensityLog.objects.filter(
+        camera__area_id__in=assigned_area_ids
+    ).select_related('camera', 'camera__area').order_by('-recorded_at')[:8]
+
+    recent_anomalies = AnomalyDetectionLog.objects.filter(
+        camera__area_id__in=assigned_area_ids
+    ).select_related('camera', 'camera__area').order_by('-detected_at')[:6]
+
+    resolved_incidents = EmergencyAlert.objects.filter(
+        Q(emergency_department=dept) | Q(area_id__in=assigned_area_ids),
+        status='RESOLVED'
+    ).select_related('area').order_by('-updated_at')[:5]
+
+    context = {
+        'dept': dept,
+        'assigned_areas': assigned_areas,
+        'total_areas_count': total_areas_count,
+        'total_vols': total_vols,
+        'on_duty_vols': on_duty_vols,
+        'available_vols': available_vols,
+        'active_alerts': active_alerts,
+        'recent_density_logs': recent_density_logs,
+        'recent_anomalies': recent_anomalies,
+        'resolved_incidents': resolved_incidents,
+    }
+    return render(request, 'dept/department_home.html', context)
+
+
+
+@login_required
+def dept_view_profile(request):
+    dept = get_object_or_404(
+        EmergencyDepartment.objects.prefetch_related('assigned_areas'),
+        LOGIN_id=request.user.id
+    )
+
+    assigned_areas = dept.assigned_areas.all()
+    assigned_area_ids = assigned_areas.values_list('id', flat=True)
+
+    volunteer_count = VolunteerProfile.objects.filter(emergency_department=dept).count()
+    active_emergencies_count = EmergencyAlert.objects.filter(
+        emergency_department=dept,
+        status__in=['ACTIVE', 'UNDER_CONTROL']
+    ).count()
+
+    context = {
+        'dept': dept,
+        'assigned_areas': assigned_areas,
+        'volunteer_count': volunteer_count,
+        'active_emergencies_count': active_emergencies_count,
+    }
+    return render(request, 'dept/dept_view_profile.html', context)
+
+
+@login_required(login_url='/myapp/login_page/')
+def dept_change_password(request):
+    if request.method == 'POST':
+        old_password = request.POST.get('old_password')
+        new_password = request.POST.get('new_password')
+        confirm_password = request.POST.get('confirm_password')
+
+        user = request.user
+
+        if not user.check_password(old_password):
+            messages.error(request, 'Old password is incorrect')
+            return redirect('/myapp/dept_change_password/')
+
+        if new_password != confirm_password:
+            messages.error(request, 'New passwords do not match')
+            return redirect('/myapp/dept_change_password/')
+
+        if len(new_password) < 8:
+            messages.error(request, 'Password must contain at least 8 characters')
+            return redirect('/myapp/dept_change_password/')
+
+        user.set_password(new_password)
+        user.save()
+
+        update_session_auth_hash(request, user)
+
+        messages.success(request, 'Password changed successfully')
+        return redirect('/myapp/login_page/')
+
+    return render(request, 'dept/change_password.html')
+
+
+
+from django.db.models import Count, Q
+@login_required
+def dept_view_areas(request):
+    dept = get_object_or_404(
+        EmergencyDepartment.objects.prefetch_related(
+            'assigned_areas',
+            'assigned_areas__cameras'
+        ),
+        LOGIN_id=request.user.id
+    )
+
+    search_query = request.GET.get('search', '').strip()
+    risk_filter = request.GET.get('risk', '').strip()
+
+    areas = dept.assigned_areas.annotate(
+        camera_count=Count('cameras')
+    ).all().order_by('name')
+
+    if search_query:
+        areas = areas.filter(
+            Q(name__icontains=search_query) |
+            Q(city__icontains=search_query) |
+            Q(district__icontains=search_query)
+        )
+
+    if risk_filter:
+        areas = areas.filter(current_risk_level=risk_filter)
+
+    total_assigned_areas = dept.assigned_areas.count()
+    high_risk_count = dept.assigned_areas.filter(current_risk_level__in=['HIGH', 'Critical', 'High']).count()
+
+    context = {
+        'dept': dept,
+        'areas': areas,
+        'total_assigned_areas': total_assigned_areas,
+        'high_risk_count': high_risk_count,
+        'search_query': search_query,
+        'risk_filter': risk_filter,
+    }
+    return render(request, 'dept/dept_view_areas.html', context)
+
+
+
+
+@login_required
+def dept_live_density_console(request):
+    dept = get_object_or_404(
+        EmergencyDepartment.objects.prefetch_related('assigned_areas'),
+        LOGIN_id=request.user.id
+    )
+
+    assigned_areas = dept.assigned_areas.all()
+    assigned_area_ids = assigned_areas.values_list('id', flat=True)
+
+    area_filter = request.GET.get('area', '').strip()
+    status_filter = request.GET.get('status', '').strip()
+
+    base_logs = CrowdDensityLog.objects.filter(
+        camera__area_id__in=assigned_area_ids
+    ).select_related('camera', 'camera__area')
+
+    if area_filter:
+        base_logs = base_logs.filter(camera__area_id=area_filter)
+    if status_filter:
+        base_logs = base_logs.filter(status=status_filter)
+
+    cameras = CCTVCamera.objects.filter(
+        area_id__in=assigned_area_ids
+    ).select_related('area').order_by('camera_identifier')
+
+    active_camera_feeds = []
+    total_live_crowd_count = 0
+
+    for cam in cameras:
+        latest_log = CrowdDensityLog.objects.filter(camera=cam).order_by('-recorded_at').first()
+        if latest_log:
+            total_live_crowd_count += latest_log.estimated_crowd_count
+        active_camera_feeds.append({
+            'camera': cam,
+            'log': latest_log,
+        })
+
+    sector_analytics = []
+    for area in assigned_areas:
+        area_cams = cameras.filter(area=area)
+        area_count = 0
+        latest_logs = []
+        for c in area_cams:
+            l = CrowdDensityLog.objects.filter(camera=c).order_by('-recorded_at').first()
+            if l:
+                area_count += l.estimated_crowd_count
+                latest_logs.append(l)
+
+        load_percentage = round((area_count / area.max_crowd_capacity * 100), 1) if area.max_crowd_capacity else 0
+
+        sector_analytics.append({
+            'area': area,
+            'camera_count': area_cams.count(),
+            'current_headcount': area_count,
+            'capacity': area.max_crowd_capacity,
+            'load_percentage': min(load_percentage, 100.0),
+            'raw_percentage': load_percentage,
+        })
+
+    total_allocated_capacity = assigned_areas.aggregate(Sum('max_crowd_capacity'))['max_crowd_capacity__sum'] or 1
+    overall_load_percentage = round((total_live_crowd_count / total_allocated_capacity * 100), 1)
+    critical_alerts = base_logs.filter(status='CRITICAL').count()
+
+    stream_logs = base_logs.order_by('-recorded_at')[:80]
+
+    context = {
+        'dept': dept,
+        'assigned_areas': assigned_areas,
+        'cameras': cameras,
+        'active_camera_feeds': active_camera_feeds,
+        'sector_analytics': sector_analytics,
+        'stream_logs': stream_logs,
+        'total_live_crowd_count': total_live_crowd_count,
+        'total_allocated_capacity': total_allocated_capacity,
+        'overall_load_percentage': overall_load_percentage,
+        'critical_alerts': critical_alerts,
+        'area_filter': area_filter,
+        'status_filter': status_filter,
+    }
+    return render(request, 'dept/dept_live_density_console.html', context)
+
+
+@login_required
+def dept_density_maps(request):
+    dept = get_object_or_404(
+        EmergencyDepartment.objects.prefetch_related('assigned_areas'),
+        LOGIN_id=request.user.id
+    )
+
+    assigned_areas = dept.assigned_areas.all()
+    assigned_area_ids = assigned_areas.values_list('id', flat=True)
+
+    area_filter = request.GET.get('area', '').strip()
+    status_filter = request.GET.get('status', '').strip()
+    camera_filter = request.GET.get('camera', '').strip()
+
+    maps_query = CrowdDensityLog.objects.filter(
+        camera__area_id__in=assigned_area_ids,
+        density_map_image__isnull=False
+    ).exclude(density_map_image='').select_related('camera', 'camera__area').order_by('-recorded_at')
+
+    if area_filter:
+        maps_query = maps_query.filter(camera__area_id=area_filter)
+
+    if camera_filter:
+        maps_query = maps_query.filter(camera_id=camera_filter)
+
+    if status_filter:
+        maps_query = maps_query.filter(status=status_filter)
+
+    cameras = CCTVCamera.objects.filter(area_id__in=assigned_area_ids).select_related('area').order_by('camera_identifier')
+
+    total_maps = maps_query.count()
+    critical_maps = maps_query.filter(status='CRITICAL').count()
+    high_maps = maps_query.filter(status='HIGH').count()
+    moderate_maps = maps_query.filter(status='MODERATE').count()
+
+    context = {
+        'dept': dept,
+        'assigned_areas': assigned_areas,
+        'cameras': cameras,
+        'density_maps': maps_query[:60],
+        'total_maps': total_maps,
+        'critical_maps': critical_maps,
+        'high_maps': high_maps,
+        'moderate_maps': moderate_maps,
+        'area_filter': area_filter,
+        'camera_filter': camera_filter,
+        'status_filter': status_filter,
+    }
+    return render(request, 'dept/dept_density_maps.html', context)
+
+
+
+
+@login_required
+def dept_view_crowd_count(request):
+    dept = get_object_or_404(
+        EmergencyDepartment.objects.prefetch_related('assigned_areas'),
+        LOGIN_id=request.user.id
+    )
+
+    assigned_areas = dept.assigned_areas.all()
+    assigned_area_ids = assigned_areas.values_list('id', flat=True)
+
+    area_filter = request.GET.get('area', '').strip()
+    camera_filter = request.GET.get('camera', '').strip()
+    status_filter = request.GET.get('status', '').strip()
+    date_filter = request.GET.get('date', '').strip()
+
+    logs = CrowdDensityLog.objects.filter(
+        camera__area_id__in=assigned_area_ids
+    ).select_related('camera', 'camera__area').order_by('-recorded_at')
+
+    if area_filter:
+        logs = logs.filter(camera__area_id=area_filter)
+    if camera_filter:
+        logs = logs.filter(camera_id=camera_filter)
+    if status_filter:
+        logs = logs.filter(status=status_filter)
+    if date_filter:
+        d = parse_date(date_filter)
+        if d:
+            logs = logs.filter(recorded_at__date=d)
+
+    sector_headcounts = []
+    total_live_jurisdiction_headcount = 0
+
+    for area in assigned_areas:
+        area_cams = CCTVCamera.objects.filter(area=area)
+        current_sector_headcount = 0
+
+        for cam in area_cams:
+            latest_cam_log = CrowdDensityLog.objects.filter(camera=cam).order_by('-recorded_at').first()
+            if latest_cam_log:
+                current_sector_headcount += latest_cam_log.estimated_crowd_count
+
+        total_live_jurisdiction_headcount += current_sector_headcount
+        capacity = area.max_crowd_capacity or 1
+        load_pct = round((current_sector_headcount / capacity) * 100, 1)
+
+        sector_headcounts.append({
+            'area': area,
+            'current_headcount': current_sector_headcount,
+            'capacity': area.max_crowd_capacity,
+            'load_pct': load_pct,
+            'progress_width': min(load_pct, 100.0),
+            'camera_count': area_cams.count(),
+        })
+
+    total_allocated_capacity = assigned_areas.aggregate(Sum('max_crowd_capacity'))['max_crowd_capacity__sum'] or 1
+    overall_load_factor = round((total_live_jurisdiction_headcount / total_allocated_capacity) * 100, 1)
+    peak_count_log = logs.aggregate(Max('estimated_crowd_count'))['estimated_crowd_count__max'] or 0
+    average_log_count = int(logs.aggregate(Avg('estimated_crowd_count'))['estimated_crowd_count__avg'] or 0)
+
+    cameras = CCTVCamera.objects.filter(area_id__in=assigned_area_ids).select_related('area').order_by(
+        'camera_identifier')
+
+    context = {
+        'dept': dept,
+        'assigned_areas': assigned_areas,
+        'cameras': cameras,
+        'logs': logs[:100],  # Latest 100 records
+        'sector_headcounts': sector_headcounts,
+        'total_live_jurisdiction_headcount': total_live_jurisdiction_headcount,
+        'total_allocated_capacity': total_allocated_capacity,
+        'overall_load_factor': overall_load_factor,
+        'peak_count_log': peak_count_log,
+        'average_log_count': average_log_count,
+        'area_filter': area_filter,
+        'camera_filter': camera_filter,
+        'status_filter': status_filter,
+        'date_filter': date_filter,
+    }
+    return render(request, 'dept/dept_view_crowd_count.html', context)
+
+
+
+@login_required
+def dept_high_density(request):
+    dept = get_object_or_404(
+        EmergencyDepartment.objects.prefetch_related('assigned_areas'),
+        LOGIN_id=request.user.id
+    )
+
+    assigned_areas = dept.assigned_areas.all()
+    assigned_area_ids = assigned_areas.values_list('id', flat=True)
+
+    area_filter = request.GET.get('area', '').strip()
+    status_filter = request.GET.get('status', '').strip()
+
+    high_density_logs = CrowdDensityLog.objects.filter(
+        camera__area_id__in=assigned_area_ids,
+        status__in=['HIGH', 'CRITICAL']
+    ).select_related('camera', 'camera__area').order_by('-recorded_at')
+
+    if area_filter:
+        high_density_logs = high_density_logs.filter(camera__area_id=area_filter)
+
+    if status_filter:
+        high_density_logs = high_density_logs.filter(status=status_filter)
+
+    critical_logs_count = high_density_logs.filter(status='CRITICAL').count()
+    high_logs_count = high_density_logs.filter(status='HIGH').count()
+
+    critical_zones = []
+    for area in assigned_areas:
+        area_cameras = CCTVCamera.objects.filter(area=area)
+        current_headcount = 0
+        latest_status = 'NORMAL'
+
+        for cam in area_cameras:
+            latest_log = CrowdDensityLog.objects.filter(camera=cam).order_by('-recorded_at').first()
+            if latest_log:
+                current_headcount += latest_log.estimated_crowd_count
+                if latest_log.status == 'CRITICAL':
+                    latest_status = 'CRITICAL'
+                elif latest_log.status == 'HIGH' and latest_status != 'CRITICAL':
+                    latest_status = 'HIGH'
+
+        capacity = area.max_crowd_capacity or 1
+        utilization_rate = round((current_headcount / capacity) * 100, 1)
+
+        if utilization_rate >= 70.0 or latest_status in ['HIGH', 'CRITICAL']:
+            critical_zones.append({
+                'area': area,
+                'camera_count': area_cameras.count(),
+                'current_headcount': current_headcount,
+                'capacity': area.max_crowd_capacity,
+                'utilization_rate': utilization_rate,
+                'progress_width': min(utilization_rate, 100.0),
+                'risk_status': latest_status,
+            })
+
+    critical_zones.sort(key=lambda x: x['utilization_rate'], reverse=True)
+
+    context = {
+        'dept': dept,
+        'assigned_areas': assigned_areas,
+        'high_density_logs': high_density_logs[:100],
+        'critical_zones': critical_zones,
+        'critical_logs_count': critical_logs_count,
+        'high_logs_count': high_logs_count,
+        'area_filter': area_filter,
+        'status_filter': status_filter,
+    }
+    return render(request, 'dept/dept_high_density.html', context)
+
+
+
+
+@login_required
+def dept_view_anomalies(request):
+    dept = get_object_or_404(
+        EmergencyDepartment.objects.prefetch_related('assigned_areas'),
+        LOGIN_id=request.user.id
+    )
+
+    assigned_areas = dept.assigned_areas.all()
+    assigned_area_ids = assigned_areas.values_list('id', flat=True)
+
+    type_filter = request.GET.get('type', '').strip()
+    area_filter = request.GET.get('area', '').strip()
+    camera_filter = request.GET.get('camera', '').strip()
+    date_filter = request.GET.get('date', '').strip()
+
+    anomalies = AnomalyDetectionLog.objects.filter(
+        camera__area_id__in=assigned_area_ids
+    ).select_related('camera', 'camera__area').order_by('-detected_at')
+
+    if type_filter:
+        anomalies = anomalies.filter(anomaly_type=type_filter)
+    if area_filter:
+        anomalies = anomalies.filter(camera__area_id=area_filter)
+    if camera_filter:
+        anomalies = anomalies.filter(camera_id=camera_filter)
+    if date_filter:
+        d = parse_date(date_filter)
+        if d:
+            anomalies = anomalies.filter(detected_at__date=d)
+
+    total_anomalies = anomalies.count()
+    peak_confidence = anomalies.aggregate(Max('confidence_score'))['confidence_score__max'] or 0.0
+    avg_confidence = anomalies.aggregate(Avg('confidence_score'))['confidence_score__avg'] or 0.0
+
+    threat_events_count = anomalies.filter(anomaly_type__in=['STAMPEDE_RUSH', 'TURBULENCE']).count()
+
+    cameras = CCTVCamera.objects.filter(area_id__in=assigned_area_ids).select_related('area').order_by('camera_identifier')
+
+    context = {
+        'dept': dept,
+        'assigned_areas': assigned_areas,
+        'cameras': cameras,
+        'anomalies': anomalies[:100],
+        'total_anomalies': total_anomalies,
+        'threat_events_count': threat_events_count,
+        'peak_confidence': peak_confidence,
+        'avg_confidence': avg_confidence,
+        'type_filter': type_filter,
+        'area_filter': area_filter,
+        'camera_filter': camera_filter,
+        'date_filter': date_filter,
+        'anomaly_choices': AnomalyDetectionLog.ANOMALY_CHOICES,
+    }
+    return render(request, 'dept/dept_view_anomalies.html', context)
+
+
+
+
+@login_required
+def dept_receive_alerts(request):
+    dept = get_object_or_404(
+        EmergencyDepartment.objects.prefetch_related('assigned_areas'),
+        LOGIN_id=request.user.id
+    )
+
+    assigned_areas = dept.assigned_areas.all()
+    assigned_area_ids = assigned_areas.values_list('id', flat=True)
+
+    status_filter = request.GET.get('status', '').strip()
+    severity_filter = request.GET.get('severity', '').strip()
+    area_filter = request.GET.get('area', '').strip()
+    date_filter = request.GET.get('date', '').strip()
+
+    alerts = EmergencyAlert.objects.filter(
+        Q(emergency_department=dept) | Q(area_id__in=assigned_area_ids)
+    ).select_related(
+        'area', 'emergency_department', 'density_log', 'anomaly_log',
+        'density_log__camera', 'anomaly_log__camera'
+    ).order_by('-created_at')
+
+    if status_filter:
+        alerts = alerts.filter(status=status_filter)
+    if severity_filter:
+        alerts = alerts.filter(severity=severity_filter)
+    if area_filter:
+        alerts = alerts.filter(area_id=area_filter)
+    if date_filter:
+        d = parse_date(date_filter)
+        if d:
+            alerts = alerts.filter(created_at__date=d)
+
+    total_received = alerts.count()
+    active_critical = alerts.filter(status='ACTIVE', severity='CRITICAL').count()
+    active_total = alerts.filter(status='ACTIVE').count()
+    under_control_total = alerts.filter(status='UNDER_CONTROL').count()
+    resolved_total = alerts.filter(status='RESOLVED').count()
+
+    context = {
+        'dept': dept,
+        'assigned_areas': assigned_areas,
+        'alerts': alerts[:100],  # Latest 100 emergency alerts
+        'total_received': total_received,
+        'active_critical': active_critical,
+        'active_total': active_total,
+        'under_control_total': under_control_total,
+        'resolved_total': resolved_total,
+        'status_filter': status_filter,
+        'severity_filter': severity_filter,
+        'area_filter': area_filter,
+        'date_filter': date_filter,
+        'severity_choices': EmergencyAlert.SEVERITY_CHOICES,
+        'status_choices': EmergencyAlert.STATUS_CHOICES,
+    }
+    return render(request, 'dept/dept_receive_alerts.html', context)
+
+
+@login_required
+def dept_acknowledge_alert(request, alert_id):
+    dept = get_object_or_404(EmergencyDepartment, LOGIN_id=request.user.id)
+    assigned_area_ids = dept.assigned_areas.values_list('id', flat=True)
+
+    alert = get_object_or_404(
+        EmergencyAlert,
+        Q(emergency_department=dept) | Q(area_id__in=assigned_area_ids),
+        id=alert_id
+    )
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'acknowledge':
+            alert.status = 'UNDER_CONTROL'
+            if not alert.emergency_department:
+                alert.emergency_department = dept
+            alert.save()
+            messages.success(request, f'Alert "{alert.title}" acknowledged. Status set to Under Control.')
+        elif action == 'resolve':
+            alert.status = 'RESOLVED'
+            alert.save()
+            messages.success(request, f'Alert "{alert.title}" marked as Resolved.')
+
+    return redirect('/myapp/dept_receive_alerts/')
+
+
+
+@login_required
+def dept_assigned_volunteers(request):
+    dept=EmergencyDepartment.objects.get(LOGIN_id=request.user.id)
+
+
+    status_filter = request.GET.get('status', '').strip()
+    search_query = request.GET.get('search', '').strip()
+
+    volunteers = VolunteerProfile.objects.filter(emergency_department__LOGIN_id=request.user.id)
+
+    if status_filter:
+        volunteers = volunteers.filter(availability_status=status_filter)
+
+    if search_query:
+        volunteers = volunteers.filter(
+            Q(user__name__icontains=search_query) |
+            Q(user__email__icontains=search_query) |
+            Q(user__phone__icontains=search_query) |
+            Q(user__place__icontains=search_query)
+        )
+
+    total_volunteers = VolunteerProfile.objects.filter(emergency_department=dept).count()
+    on_duty_count = VolunteerProfile.objects.filter(emergency_department=dept, availability_status='ON_DUTY').count()
+    available_count = VolunteerProfile.objects.filter(emergency_department=dept, availability_status='AVAILABLE').count()
+    off_duty_count = VolunteerProfile.objects.filter(emergency_department=dept, availability_status='OFF_DUTY').count()
+
+    context = {
+        'dept': dept,
+        'volunteers': volunteers[:120],
+        'total_volunteers': total_volunteers,
+        'on_duty_count': on_duty_count,
+        'available_count': available_count,
+        'off_duty_count': off_duty_count,
+        'status_filter': status_filter,
+        'search_query': search_query,
+    }
+    return render(request, 'dept/dept_assigned_volunteers.html', context)
+
+
+
+
+from django.db.models import Q
+
+@login_required
+def dept_assign_tasks(request):
+    dept = get_object_or_404(
+        EmergencyDepartment.objects.prefetch_related('assigned_areas'),
+        LOGIN_id=request.user.id
+    )
+    assigned_area_ids = dept.assigned_areas.values_list('id', flat=True)
+
+    if request.method == 'POST':
+        alert_id = request.POST.get('alert_id')
+        volunteer_id = request.POST.get('volunteer_id')
+        title = request.POST.get('title', '').strip()
+        instruction = request.POST.get('instruction', '').strip()
+
+        if not (alert_id and volunteer_id and title and instruction):
+            messages.error(request, 'Please complete all required fields.')
+            return redirect('/myapp/dept_assign_tasks/')
+
+        alert = get_object_or_404(
+            EmergencyAlert,
+            Q(emergency_department=dept) | Q(area_id__in=assigned_area_ids),
+            id=alert_id
+        )
+        volunteer = get_object_or_404(
+            VolunteerProfile,
+            emergency_department=dept,
+            id=volunteer_id
+        )
+
+        EmergencyTask.objects.create(
+            alert=alert,
+            department=dept,
+            volunteer=volunteer,
+            title=title,
+            instruction=instruction,
+            status='PENDING'
+        )
+
+        if volunteer.availability_status == 'AVAILABLE':
+            volunteer.availability_status = 'ON_DUTY'
+            volunteer.save()
+
+        messages.success(request, f'Task successfully assigned to volunteer {volunteer.name}.')
+        return redirect('/myapp/dept_assign_tasks/')
+
+    selected_alert_id = request.GET.get('alert_id', '').strip()
+    selected_volunteer_id = request.GET.get('volunteer_id', '').strip()
+
+    active_alerts = EmergencyAlert.objects.filter(
+        Q(emergency_department=dept) | Q(area_id__in=assigned_area_ids),
+        status__in=['ACTIVE', 'UNDER_CONTROL']
+    ).select_related('area').order_by('-created_at')
+
+    # Fixed: Query VolunteerProfile directly without 'user'
+    volunteers = VolunteerProfile.objects.filter(
+        emergency_department=dept
+    ).order_by('availability_status', 'name')
+
+    # Fixed: Task select_related references 'volunteer' directly
+    assigned_tasks = EmergencyTask.objects.filter(
+        department=dept
+    ).select_related('alert', 'alert__area', 'volunteer').order_by('-assigned_at')[:60]
+
+    context = {
+        'dept': dept,
+        'active_alerts': active_alerts,
+        'volunteers': volunteers,
+        'assigned_tasks': assigned_tasks,
+        'selected_alert_id': selected_alert_id,
+        'selected_volunteer_id': selected_volunteer_id,
+    }
+    return render(request, 'dept/dept_assign_tasks.html', context)
+
+
+
+from django.db.models import Q, F
+from django.utils.dateparse import parse_date
+@login_required
+def dept_previous_incidents(request):
+    dept = get_object_or_404(
+        EmergencyDepartment.objects.prefetch_related('assigned_areas'),
+        LOGIN_id=request.user.id
+    )
+
+    assigned_areas = dept.assigned_areas.all()
+    assigned_area_ids = assigned_areas.values_list('id', flat=True)
+
+    severity_filter = request.GET.get('severity', '').strip()
+    area_filter = request.GET.get('area', '').strip()
+    date_from = request.GET.get('date_from', '').strip()
+    date_to = request.GET.get('date_to', '').strip()
+    search_query = request.GET.get('search', '').strip()
+
+    resolved_alerts = EmergencyAlert.objects.filter(
+        Q(emergency_department=dept) | Q(area_id__in=assigned_area_ids),
+        status='RESOLVED'
+    ).select_related(
+        'area', 'emergency_department', 'density_log', 'anomaly_log',
+        'density_log__camera', 'anomaly_log__camera'
+    ).prefetch_related('tasks').order_by('-updated_at')
+
+    if severity_filter:
+        resolved_alerts = resolved_alerts.filter(severity=severity_filter)
+    if area_filter:
+        resolved_alerts = resolved_alerts.filter(area_id=area_filter)
+    if search_query:
+        resolved_alerts = resolved_alerts.filter(
+            Q(title__icontains=search_query) |
+            Q(description__icontains=search_query) |
+            Q(public_instructions__icontains=search_query)
+        )
+    if date_from:
+        d_from = parse_date(date_from)
+        if d_from:
+            resolved_alerts = resolved_alerts.filter(created_at__date__gte=d_from)
+    if date_to:
+        d_to = parse_date(date_to)
+        if d_to:
+            resolved_alerts = resolved_alerts.filter(created_at__date__lte=d_to)
+
+    # Historical Metrics
+    total_resolved = resolved_alerts.count()
+    critical_resolved = resolved_alerts.filter(severity='CRITICAL').count()
+    high_resolved = resolved_alerts.filter(severity='HIGH').count()
+    medium_resolved = resolved_alerts.filter(severity='MEDIUM').count()
+
+    context = {
+        'dept': dept,
+        'assigned_areas': assigned_areas,
+        'resolved_alerts': resolved_alerts[:120],  # Latest 120 resolved incidents
+        'total_resolved': total_resolved,
+        'critical_resolved': critical_resolved,
+        'high_resolved': high_resolved,
+        'medium_resolved': medium_resolved,
+        'severity_filter': severity_filter,
+        'area_filter': area_filter,
+        'date_from': date_from,
+        'date_to': date_to,
+        'search_query': search_query,
+        'severity_choices': EmergencyAlert.SEVERITY_CHOICES,
+    }
+    return render(request, 'dept/dept_previous_incidents.html', context)
+
+
+
+
+@login_required
+def dept_monitor_volunteer_response(request):
+    dept = get_object_or_404(
+        EmergencyDepartment.objects.prefetch_related('assigned_areas'),
+        LOGIN_id=request.user.id
+    )
+
+    status_filter = request.GET.get('status', '').strip()
+    alert_filter = request.GET.get('alert', '').strip()
+    search_query = request.GET.get('search', '').strip()
+    date_filter = request.GET.get('date', '').strip()
+
+    tasks = EmergencyTask.objects.filter(
+        department=dept
+    ).select_related(
+        'alert', 'alert__area', 'volunteer'
+    ).prefetch_related(
+        'ground_reports'
+    ).order_by('-assigned_at')
+
+    if status_filter:
+        tasks = tasks.filter(status=status_filter)
+    if alert_filter:
+        tasks = tasks.filter(alert_id=alert_filter)
+    if search_query:
+        tasks = tasks.filter(
+            Q(title__icontains=search_query) |
+            Q(volunteer__name__icontains=search_query) |
+            Q(volunteer__phone__icontains=search_query) |
+            Q(instruction__icontains=search_query)
+        )
+    if date_filter:
+        d = parse_date(date_filter)
+        if d:
+            tasks = tasks.filter(assigned_at__date=d)
+
+    total_tasks = EmergencyTask.objects.filter(department=dept).count()
+    pending_tasks = EmergencyTask.objects.filter(department=dept, status='PENDING').count()
+    active_deployments = EmergencyTask.objects.filter(department=dept, status__in=['ACCEPTED', 'IN_PROGRESS']).count()
+    completed_tasks = EmergencyTask.objects.filter(department=dept, status='COMPLETED').count()
+    declined_tasks = EmergencyTask.objects.filter(department=dept, status='DECLINED').count()
+
+    recent_reports = GroundReport.objects.filter(
+        alert__emergency_department=dept
+    ).select_related('task', 'volunteer', 'alert', 'alert__area').order_by('-reported_at')[:10]
+
+    department_alerts = EmergencyAlert.objects.filter(
+        Q(emergency_department=dept) | Q(area__in=dept.assigned_areas.all())
+    ).distinct().order_by('-created_at')
+
+    context = {
+        'dept': dept,
+        'tasks': tasks[:100],
+        'recent_reports': recent_reports,
+        'department_alerts': department_alerts,
+        'total_tasks': total_tasks,
+        'pending_tasks': pending_tasks,
+        'active_deployments': active_deployments,
+        'completed_tasks': completed_tasks,
+        'declined_tasks': declined_tasks,
+        'status_filter': status_filter,
+        'alert_filter': alert_filter,
+        'search_query': search_query,
+        'date_filter': date_filter,
+        'status_choices': EmergencyTask.STATUS_CHOICES,
+    }
+    return render(request, 'dept/dept_monitor_volunteer_response.html', context)
+
+
+
+
+
+
+
+
+
+
+
+
+# flutter===========================
+
+
+
+
+
+from django.contrib.auth import authenticate, login
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+
+
+@csrf_exempt
+def app_login(request):
+
+    if request.method != "POST":
+        return JsonResponse({
+            "status": "error",
+            "message": "POST method required"
+        }, status=405)
+
+    username = request.POST.get("username", "").strip()
+    password = request.POST.get("password", "")
+
+    print("Received username:", repr(username))
+    print("Received password length:", len(password))
+
+    if not username or not password:
+        return JsonResponse({
+            "status": "error",
+            "message": "Username and password are required"
+        }, status=400)
+
+    user = authenticate(
+        request,
+        username=username,
+        password=password
+    )
+
+    print("Authenticated user:", user)
+
+    # Check authentication
+    if user is None:
+        return JsonResponse({
+            "status": "error",
+            "message": "Invalid username or password"
+        }, status=401)
+
+    # Debug information
+    print("Authenticated username:", user.username)
+    print("Authenticated user ID:", user.id)
+    print(
+        "Authenticated user's groups:",
+        list(user.groups.values_list("name", flat=True))
+    )
+
+    # Check Users group
+    is_users_group = user.groups.filter(name="Users").exists()
+
+    print("Users group exists:", is_users_group)
+
+    if not is_users_group:
+        return JsonResponse({
+            "status": "error",
+            "message": "User is not assigned to the Users group"
+        }, status=403)
+
+    # Login success
+    login(request, user)
+
+    return JsonResponse({
+        "status": "ok",
+        "lid": str(user.id),
+        "type": "Users"
+    }, status=200)
+
+
+
+
+def user_view_area(request):
+    l=[]
+    a=Area.objects.all()
+    for i in a:
+        l.append({
+            'id':i.id,
+            'name':i.name,
+            'city':i.city,
+            'district':i.district,
+            'state':i.state,
+            'pincode':str(i.pincode),
+            'latitude':str(i.latitude),
+            'longitude':str(i.longitude),
+            'max_crowd_capacity':str(i.max_crowd_capacity),
+            'current_risk_level':str(i.current_risk_level),
+            'description':str(i.description),
+        })
+
+    print(l,'data====')
+    return JsonResponse({'status':'ok','data':l})
+
+
+def user_register(request):
+    name = request.POST['area']
+    area = request.POST['region']
+    place = request.POST['place']
+    phone = request.POST['phone']
+    email = request.POST['email']
+    username = request.POST['username']
+    password = request.POST['password']
+    latitude = request.POST.get('latitude') or None
+    longitude = request.POST.get('longitude') or None
+
+    if User.objects.filter(username=username).exists():
+        return JsonResponse({'status': 'no'})
+
+    if User.objects.filter(email=email).exists():
+        return JsonResponse({'status': 'no'})
+
+    user = User.objects.create_user(
+        username=username,
+        password=password,
+        email=email
+    )
+
+    group = Group.objects.get(name="Users")
+    user.groups.add(group)
+
+    ert = User_Table()
+    ert.LOGIN = user
+    ert.area = Area.objects.get(id=area)
+    ert.name = name
+    ert.email = email
+    ert.place = place
+    ert.latitude = latitude
+    ert.longitude = longitude
+    ert.phone = phone
+    ert.save()
+
+    return JsonResponse({'status': 'ok'})
+
+
+
+def user_change_password(request):
+    id = request.POST['lid']
+    current_password = request.POST['old_password']
+    new_password = request.POST['new_password']
+    confirm_password = request.POST['confirm_password']
+    res = User.objects.get(id=id)
+    if res.check_password(current_password):
+        if new_password == confirm_password:
+            res.set_password(new_password)
+            res.save()
+            return JsonResponse({'status': 'ok'})
+        else:
+            return JsonResponse({'status': 'no'})
+    else:
+        return JsonResponse({'status': 'no'})
+
+
+
+
+@csrf_exempt
+def user_view_profile(request):
+    lid = request.POST['lid']
+
+    print(lid)
+    print(lid,'login id===')
+    profile = User_Table.objects.get(LOGIN_id=lid)
+
+    print(profile,'profile data')
+
+    return JsonResponse({
+        'status': 'ok',
+        'name': profile.name or '',
+        'phone': profile.phone or '',
+        'email': profile.email or '',
+        'place': profile.place or '',
+        'area_id': str(profile.area.id) if profile.area else '',
+        'area_name': str(profile.area.name) if profile.area else 'Not Assigned',
+        'latitude': str(profile.latitude) if profile.latitude is not None else '',
+        'longitude': str(profile.longitude) if profile.longitude is not None else '',
+    })
+
+
+
+@csrf_exempt
+def user_edit_profile(request):
+
+    lid = request.POST.get('lid')
+    name = request.POST.get('area')       # Name of the user
+    area_id = request.POST.get('region')  # Area ForeignKey ID
+    place = request.POST.get('place')
+    phone = request.POST.get('phone')
+    email = request.POST.get('email')
+    lat = request.POST.get('latitude')
+    lon = request.POST.get('longitude')
+
+    profile = User_Table.objects.get(LOGIN_id=lid)
+    profile.name = name
+    profile.place = place
+    profile.phone = phone
+    profile.email = email
+
+    if area_id:
+        try:
+            profile.area = Area.objects.get(id=area_id)
+        except Area.DoesNotExist:
+            pass
+
+    if lat and lon:
+        profile.latitude = lat
+        profile.longitude = lon
+
+    profile.save()
+    return JsonResponse({'status': 'ok', 'message': 'Profile updated successfully'})
+
+
+
+@csrf_exempt
+def user_view_emergency_department(request):
+    try:
+        lid = request.POST.get('lid')
+        user_area_id = None
+
+        if lid:
+            try:
+                user_record = User_Table.objects.select_related('area').get(LOGIN_id=lid)
+                if user_record.area:
+                    user_area_id = user_record.area.id
+            except User_Table.DoesNotExist:
+                pass
+
+        departments = EmergencyDepartment.objects.filter(is_active=True).prefetch_related('assigned_areas')
+
+        dept_list = []
+        for d in departments:
+            assigned_areas_data = [
+                {
+                    'id': str(a.id),
+                    'name': str(getattr(a, 'name', a)),
+                    'city': str(getattr(a, 'city', '')),
+                }
+                for a in d.assigned_areas.all()
+            ]
+
+            is_user_area_covered = False
+            if user_area_id:
+                is_user_area_covered = any(str(a.id) == str(user_area_id) for a in d.assigned_areas.all())
+
+            dept_list.append({
+                'id': str(d.id),
+                'department_name': d.department_name,
+                'department_code': d.department_code,
+                'contact_number': d.contact_number,
+                'helpline_number': d.helpline_number,
+                'department_email': d.department_email,
+                'office_address': d.office_address,
+                'is_user_area': is_user_area_covered,
+                'assigned_areas': assigned_areas_data,
+            })
+
+        if user_area_id:
+            dept_list.sort(key=lambda x: x['is_user_area'], reverse=True)
+
+        return JsonResponse({
+            'status': 'ok',
+            'data': dept_list
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
+
+
+
+
+@csrf_exempt
+def user_view_emergency_alerts(request):
+    try:
+        lid = request.POST.get('lid')
+        user_area_id = None
+
+        if lid:
+            try:
+                user_record = User_Table.objects.select_related('area').get(LOGIN_id=lid)
+                if user_record.area:
+                    user_area_id = user_record.area.id
+            except User_Table.DoesNotExist:
+                pass
+
+        alerts = EmergencyAlert.objects.select_related('area', 'emergency_department').order_by('-created_at')
+
+        alert_list = []
+        for alert in alerts:
+            is_user_area = (user_area_id is not None and alert.area_id == user_area_id)
+
+            alert_list.append({
+                'id': str(alert.id),
+                'title': alert.title,
+                'description': alert.description,
+                'public_instructions': alert.public_instructions or 'Follow standard safety precautions and keep exits clear.',
+                'severity': alert.severity,  # 'MEDIUM', 'HIGH', 'CRITICAL'
+                'status': alert.status,      # 'ACTIVE', 'UNDER_CONTROL', 'RESOLVED'
+                'area_name': getattr(alert.area, 'name', str(alert.area)),
+                'area_city': getattr(alert.area, 'city', ''),
+                'department_name': alert.emergency_department.department_name if alert.emergency_department else 'Central Dispatch',
+                'department_helpline': alert.emergency_department.helpline_number if alert.emergency_department else '',
+                'is_user_area': is_user_area,
+                'created_at': alert.created_at.strftime('%d %b %Y, %I:%M %p') if alert.created_at else '',
+            })
+
+        alert_list.sort(key=lambda x: (x['is_user_area'], x['status'] == 'ACTIVE'), reverse=True)
+
+        return JsonResponse({
+            'status': 'ok',
+            'data': alert_list,
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
+
+
+
+
+@csrf_exempt
+def user_submit_complaint(request):
+    lid = request.POST.get('lid')
+    subject = request.POST.get('subject', '').strip()
+    description = request.POST.get('description', '').strip()
+
+    if not subject or not description:
+        return JsonResponse({'status': 'no', 'message': 'Subject and description are required'})
+
+    user_profile = User_Table.objects.get(LOGIN_id=lid)
+
+    Complaint.objects.create(
+        user=user_profile,
+        subject=subject,
+        description=description,
+        status='Pending'
+    )
+
+    return JsonResponse({'status': 'ok', 'message': 'Complaint submitted successfully'})
+
+@csrf_exempt
+def user_view_complaints(request):
+    lid = request.POST.get('lid')
+    user_profile = User_Table.objects.get(LOGIN_id=lid)
+
+    complaints = Complaint.objects.filter(user=user_profile).order_by('-submitted_at')
+
+    data = []
+    for c in complaints:
+        data.append({
+            'id': str(c.id),
+            'subject': c.subject,
+            'description': c.description,
+            'admin_response': c.admin_response or '',
+            'status': c.status,
+            'submitted_at': c.submitted_at.strftime('%d %b %Y, %I:%M %p') if c.submitted_at else '',
+            'resolved_at': c.resolved_at.strftime('%d %b %Y, %I:%M %p') if c.resolved_at else '',
+        })
+
+    return JsonResponse({'status': 'ok', 'data': data})
+
+
+
+@csrf_exempt
+def user_submit_feedback(request):
+    lid = request.POST.get('lid')
+    subject = request.POST.get('subject', '').strip()
+    message = request.POST.get('message', '').strip()
+    rating_raw = request.POST.get('rating', '5')
+
+    if not subject or not message:
+        return JsonResponse({'status': 'no', 'message': 'Subject and message are required'})
+
+    try:
+        rating = int(rating_raw)
+        if rating < 1 or rating > 5:
+            rating = 5
+    except (ValueError, TypeError):
+        rating = 5
+
+    user_profile = User_Table.objects.get(LOGIN_id=lid)
+
+    Feedback.objects.create(
+        user=user_profile,
+        subject=subject,
+        message=message,
+        rating=rating
+    )
+
+    return JsonResponse({'status': 'ok', 'message': 'Feedback submitted successfully'})
+
+
+@csrf_exempt
+def user_view_feedback(request):
+
+    lid = request.POST.get('lid')
+    user_profile = User_Table.objects.get(LOGIN_id=lid)
+
+    feedbacks = Feedback.objects.filter(user=user_profile).order_by('-submitted_at')
+
+    data = []
+    for f in feedbacks:
+        data.append({
+            'id': str(f.id),
+            'subject': f.subject,
+            'message': f.message,
+            'rating': f.rating,
+            'submitted_at': f.submitted_at.strftime('%d %b %Y, %I:%M %p') if f.submitted_at else '',
+        })
+
+    return JsonResponse({'status': 'ok', 'data': data})
+
+
+
+
+@csrf_exempt
+def user_add_emergency_report(request):
+    lid = request.POST.get('lid')
+    title = request.POST.get('title', '').strip()
+    description = request.POST.get('description', '').strip()
+    public_instructions = request.POST.get('public_instructions', '').strip()
+
+    if not title or not description:
+        return JsonResponse({'status': 'no', 'message': 'Title and description are required'})
+
+    if not public_instructions:
+        public_instructions = "Avoid the crowded zone. Follow emergency volunteer directives and keep evacuation pathways open."
+
+    user_profile = User_Table.objects.get(LOGIN_id=lid)
+
+    report = Report_Emergency.objects.create(
+        USER=user_profile,
+        title=title,
+        description=description,
+        public_instructions=public_instructions,
+        status='ACTIVE'
+    )
+
+    return JsonResponse({'status': 'ok', 'message': 'Emergency reported successfully', 'id': str(report.id)})
+
+
+@csrf_exempt
+def user_view_emergency_reports(request):
+
+    lid = request.POST.get('lid')
+    user_profile = User_Table.objects.get(LOGIN_id=lid)
+
+    reports = Report_Emergency.objects.filter(USER=user_profile).order_by('-created_at')
+
+    data = []
+    for r in reports:
+        data.append({
+            'id': str(r.id),
+            'title': r.title,
+            'description': r.description,
+            'public_instructions': r.public_instructions or '',
+            'status': r.status,
+            'created_at': r.created_at.strftime('%d %b %Y, %I:%M %p') if r.created_at else '',
+        })
+
+    return JsonResponse({'status': 'ok', 'data': data})
+
+
+@csrf_exempt
+def user_delete_emergency_report(request):
+
+    lid = request.POST.get('lid')
+
+    user_profile=User_Table.objects.get(LOGIN_id=lid)
+    report_id = request.POST.get('report_id')
+
+    report = Report_Emergency.objects.get(id=report_id, USER=user_profile)
+    report.delete()
+
+    return JsonResponse({'status': 'ok', 'message': 'Report deleted successfully'})
+
+
+
+
+@csrf_exempt
+def user_view_emergency_instructions(request):
+
+    instructions = EmergencyInstruction.objects.select_related('emergency_department').order_by('-created_at')
+
+    data = []
+    for item in instructions:
+        data.append({
+            'id': str(item.id),
+            'title': item.title,
+            'instruction_type': item.instruction_type,
+            'severity_level': item.severity_level,
+            'department_name': item.emergency_department.department_name if item.emergency_department else 'Central Public Safety',
+            'department_helpline': item.emergency_department.helpline_number if item.emergency_department else '',
+            'summary': item.summary,
+            'detailed_steps': item.detailed_steps,
+            'do_list': item.do_list or '',
+            'dont_list': item.dont_list or '',
+            'created_at': item.created_at.strftime('%d %b %Y') if item.created_at else '',
+        })
+
+    return JsonResponse({'status': 'ok', 'data': data})
+
+
+
+
+@csrf_exempt
+def user_view_crowd_density(request):
+    try:
+        lid = request.POST.get('lid')
+        user_area_id = None
+
+        if lid:
+            try:
+                user_record = User_Table.objects.select_related('area').get(LOGIN_id=lid)
+                if user_record.area:
+                    user_area_id = user_record.area.id
+            except User_Table.DoesNotExist:
+                pass
+
+        cameras = CCTVCamera.objects.all().select_related('area')
+
+        # Prioritize cameras matching user's assigned area
+        if user_area_id:
+            cameras = sorted(cameras, key=lambda c: c.area_id == user_area_id, reverse=True)
+
+        data = []
+        for cam in cameras:
+            latest_log = CrowdDensityLog.objects.filter(camera=cam).order_by('-recorded_at').first()
+
+            count = latest_log.estimated_crowd_count if latest_log else 0
+            status = latest_log.status if latest_log else 'NORMAL'
+            density_img = latest_log.density_map_image.url if (latest_log and latest_log.density_map_image) else ''
+            recorded_time = latest_log.recorded_at.strftime('%I:%M:%S %p, %d %b') if latest_log else 'Live Feed Idle'
+
+            # Extract max_crowd_capacity directly from the camera's Area model
+            max_capacity = cam.area.max_crowd_capacity if (cam.area and cam.area.max_crowd_capacity) else 500
+            try:
+                max_capacity = int(max_capacity)
+            except (ValueError, TypeError):
+                max_capacity = 500
+
+            load_percentage = min(100, int((count / max_capacity) * 100)) if max_capacity > 0 else 0
+            is_user_area = (user_area_id is not None and cam.area_id == user_area_id)
+
+            data.append({
+                'camera_id': str(cam.id),
+                'camera_identifier': cam.camera_identifier,
+                'location_details': cam.location_details or 'Surveillance Point',
+                'latitude': str(cam.latitude) if cam.latitude is not None else '',
+                'longitude': str(cam.longitude) if cam.longitude is not None else '',
+                'area_name': cam.area.name if cam.area else 'Surveillance Zone',
+                'area_city': cam.area.city if cam.area else '',
+                'area_risk_level': cam.area.current_risk_level if cam.area else 'LOW',
+                'is_user_area': is_user_area,
+                'count': count,
+                'max_capacity': max_capacity,
+                'load_percentage': load_percentage,
+                'status': status,
+                'density_map': density_img,
+                'recorded_at': recorded_time,
+            })
+
+        return JsonResponse({'status': 'ok', 'data': data})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
+
+
+
+
+
+
+
+
+
+
+# camera main part=======================
+
+
+
+
+
+
+
+
+import base64
+import binascii
+import json
+import threading
+from collections import deque
+from datetime import timedelta
+from pathlib import Path
+
+import cv2
+import numpy as np
+
+from django.conf import settings
+from django.core.cache import cache
+from django.core.files.base import ContentFile
+from django.db import transaction
+from django.http import JsonResponse
+from django.shortcuts import render, get_object_or_404
+from django.utils import timezone
+from django.views.decorators.csrf import csrf_protect
+from django.views.decorators.http import require_POST
+
+from .models import (
+    Area,
+    CCTVCamera,
+    CrowdDensityLog,
+    AnomalyDetectionLog,
+    EmergencyAlert,
+    EmergencyDepartment,
+)
+
+
+# ---------------------------------------------------------
+# CONFIGURATION
+# ---------------------------------------------------------
+
+YOLO_MODEL_PATH = getattr(
+    settings, "CROWD_YOLO_MODEL_PATH",
+    str(Path(settings.BASE_DIR) / "yolov8n.pt")
+)
+
+CSRNET_PROTOTXT = getattr(
+    settings, "CSRNET_PROTOTXT",
+    str(Path(settings.BASE_DIR) / "models" / "deploy.prototxt")
+)
+
+CSRNET_WEIGHTS = getattr(
+    settings, "CSRNET_WEIGHTS",
+    str(Path(settings.BASE_DIR) / "models" / "shanghaib.caffemodel")
+)
+
+FRAME_HISTORY_SIZE = 8
+MIN_LOG_INTERVAL_SECONDS = 30
+ANOMALY_COOLDOWN_SECONDS = 30
+
+model_lock = threading.Lock()
+model_state = {
+    "yolo": None,
+    "csrnet": None,
+    "csrnet_checked": False,
+}
+
+# Recent frame data is kept per camera in this process.
+# For multiple workers, use shared storage instead.
+frame_histories = {}
+frame_history_lock = threading.Lock()
+
+
+# ---------------------------------------------------------
+# MODEL LOADING
+# ---------------------------------------------------------
+
+def get_yolo_model():
+    """Load YOLO only when first needed."""
+    if model_state["yolo"] is not None:
+        return model_state["yolo"]
+
+    with model_lock:
+        if model_state["yolo"] is None:
+            from ultralytics import YOLO
+            model_state["yolo"] = YOLO(YOLO_MODEL_PATH)
+
+    return model_state["yolo"]
+
+
+def get_csrnet_model():
+    """
+    Load an existing CSRNet Caffe model if its files exist.
+    Returns None when CSRNet files are unavailable.
+    """
+    if model_state["csrnet_checked"]:
+        return model_state["csrnet"]
+
+    with model_lock:
+        if not model_state["csrnet_checked"]:
+            if (
+                Path(CSRNET_PROTOTXT).exists()
+                and Path(CSRNET_WEIGHTS).exists()
+            ):
+                model_state["csrnet"] = cv2.dnn.readNetFromCaffe(
+                    CSRNET_PROTOTXT,
+                    CSRNET_WEIGHTS,
+                )
+
+            model_state["csrnet_checked"] = True
+
+    return model_state["csrnet"]
+
+
+# ---------------------------------------------------------
+# FRAME DECODING
+# ---------------------------------------------------------
+
+def decode_frame(frame_string):
+    """Decode a base64 webcam frame into an OpenCV image."""
+    if not frame_string:
+        raise ValueError("Frame data is missing.")
+
+    if "," in frame_string and frame_string.startswith("data:"):
+        frame_string = frame_string.split(",", 1)[1]
+
+    try:
+        raw_data = base64.b64decode(frame_string, validate=True)
+    except (binascii.Error, ValueError):
+        raise ValueError("Invalid base64 frame data.")
+
+    image_array = np.frombuffer(raw_data, dtype=np.uint8)
+    frame = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
+
+    if frame is None:
+        raise ValueError("Unable to decode the image.")
+
+    return frame
+
+
+def image_to_base64(image, extension=".jpg"):
+    success, encoded = cv2.imencode(extension, image)
+
+    if not success:
+        return None
+
+    return base64.b64encode(encoded.tobytes()).decode("utf-8")
+
+
+# ---------------------------------------------------------
+# YOLO CROWD DETECTION
+# ---------------------------------------------------------
+
+def detect_people_yolo(frame):
+    """
+    Detect people using YOLO COCO class 0.
+    Returns person count, bounding boxes and annotated image.
+    """
+    model = get_yolo_model()
+
+    results = model.predict(
+        source=frame,
+        classes=[0],
+        conf=0.20,
+        imgsz=640,
+        verbose=False,
+    )
+
+    result = results[0]
+    annotated = frame.copy()
+    people = []
+
+    if result.boxes is not None:
+        for box in result.boxes:
+            coordinates = box.xyxy[0].cpu().numpy().astype(int)
+            x1, y1, x2, y2 = coordinates.tolist()
+
+            confidence = float(box.conf[0].cpu().item())
+
+            people.append({
+                "x1": max(0, x1),
+                "y1": max(0, y1),
+                "x2": min(frame.shape[1] - 1, x2),
+                "y2": min(frame.shape[0] - 1, y2),
+                "confidence": confidence,
+                "center_x": (x1 + x2) // 2,
+                "center_y": (y1 + y2) // 2,
+            })
+
+            cv2.rectangle(
+                annotated,
+                (x1, y1),
+                (x2, y2),
+                (0, 255, 0),
+                2,
+            )
+
+            cv2.putText(
+                annotated,
+                f"Person {confidence:.2f}",
+                (x1, max(y1 - 8, 15)),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                (0, 255, 0),
+                2,
+            )
+
+    return len(people), people, annotated
+
+
+# ---------------------------------------------------------
+# CSRNET DENSITY ESTIMATION
+# ---------------------------------------------------------
+
+def predict_csrnet_density(frame):
+    """
+    Baseline CSRNet inference.
+    Preprocessing must match the specific model used for training.
+    """
+    model = get_csrnet_model()
+
+    if model is None:
+        return None, None
+
+    resized = cv2.resize(frame, (224, 224))
+    rgb = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
+
+    blob = cv2.dnn.blobFromImage(
+        rgb.astype(np.float32),
+        scalefactor=1.0,
+        size=(224, 224),
+        mean=(0, 0, 0),
+        swapRB=False,
+        crop=False,
+    )
+
+    model.setInput(blob)
+    density_map = model.forward()
+
+    estimated_count = max(
+        0,
+        int(round(float(np.sum(density_map))))
+    )
+
+    density_map = np.squeeze(density_map)
+
+    return estimated_count, density_map
+
+
+def create_density_heatmap(frame, density_map=None):
+    """
+    Produce a visual heatmap.
+    If a CSRNet density map is unavailable, use person detections
+    as approximate spatial density points.
+    """
+    height, width = frame.shape[:2]
+
+    heatmap = np.zeros((height, width), dtype=np.float32)
+
+    if density_map is not None and density_map.ndim == 2:
+        resized_map = cv2.resize(
+            density_map.astype(np.float32),
+            (width, height),
+        )
+        heatmap = np.maximum(resized_map, 0)
+
+    else:
+        # Approximate visualization from detected people.
+        # This is not a trained density estimator.
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        heatmap = cv2.GaussianBlur(
+            gray.astype(np.float32) * 0,
+            (0, 0),
+            12,
+        )
+
+    if heatmap.max() > 0:
+        normalized = cv2.normalize(
+            heatmap,
+            None,
+            0,
+            255,
+            cv2.NORM_MINMAX,
+        ).astype(np.uint8)
+    else:
+        normalized = np.zeros((height, width), dtype=np.uint8)
+
+    colored = cv2.applyColorMap(normalized, cv2.COLORMAP_JET)
+
+    overlay = cv2.addWeighted(frame, 0.55, colored, 0.45, 0)
+
+    return overlay
+
+
+# ---------------------------------------------------------
+# SPATIAL ANALYSIS: ZONE-WISE DENSITY
+# ---------------------------------------------------------
+
+def calculate_zone_density(people, frame_width, frame_height, rows=3, cols=3):
+    """
+    Divide camera image into a 3x3 grid.
+    Count detected person centres in each zone.
+    """
+    zones = {}
+
+    for row in range(rows):
+        for col in range(cols):
+            zone_name = f"R{row + 1}C{col + 1}"
+            zones[zone_name] = {
+                "people_count": 0,
+                "zone_area_pixels": (
+                    (frame_width / cols) * (frame_height / rows)
+                ),
+            }
+
+    for person in people:
+        x = person["center_x"]
+        y = person["center_y"]
+
+        col = min(cols - 1, max(0, int(x / frame_width * cols)))
+        row = min(rows - 1, max(0, int(y / frame_height * rows)))
+
+        zone_name = f"R{row + 1}C{col + 1}"
+        zones[zone_name]["people_count"] += 1
+
+    for zone in zones.values():
+        zone["people_per_10000_pixels"] = round(
+            zone["people_count"] /
+            max(zone["zone_area_pixels"], 1) * 10000,
+            3,
+        )
+
+    return zones
+
+
+# ---------------------------------------------------------
+# OPTICAL FLOW / CROWD MOTION
+# ---------------------------------------------------------
+
+def calculate_optical_flow(camera_id, frame):
+    """
+    Farneback optical flow compares the previous and current frames.
+    It estimates image motion, not individual pedestrian trajectories.
+    """
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+    with frame_history_lock:
+        history = frame_histories.setdefault(
+            camera_id,
+            deque(maxlen=FRAME_HISTORY_SIZE),
+        )
+
+        previous_gray = history[-1]["gray"] if history else None
+
+        flow_result = {
+            "available": False,
+            "mean_magnitude": 0.0,
+            "moving_pixel_ratio": 0.0,
+            "mean_direction_degrees": 0.0,
+            "motion_level": "UNKNOWN",
+        }
+
+        if previous_gray is not None:
+            flow = cv2.calcOpticalFlowFarneback(
+                previous_gray,
+                gray,
+                None,
+                0.5,
+                3,
+                15,
+                3,
+                5,
+                1.2,
+                0,
+            )
+
+            magnitude, angle = cv2.cartToPolar(
+                flow[..., 0],
+                flow[..., 1],
+                angleInDegrees=True,
+            )
+
+            mean_magnitude = float(np.mean(magnitude))
+            moving_ratio = float(np.mean(magnitude > 2.0))
+            mean_angle = float(np.mean(angle))
+
+            if mean_magnitude < 0.5:
+                motion_level = "LOW"
+            elif mean_magnitude < 2.5:
+                motion_level = "MODERATE"
+            else:
+                motion_level = "HIGH"
+
+            flow_result = {
+                "available": True,
+                "mean_magnitude": round(mean_magnitude, 3),
+                "moving_pixel_ratio": round(moving_ratio, 4),
+                "mean_direction_degrees": round(mean_angle, 2),
+                "motion_level": motion_level,
+            }
+
+        history.append({
+            "gray": gray,
+            "timestamp": timezone.now().isoformat(),
+        })
+
+    return flow_result
+
+
+# ---------------------------------------------------------
+# TEMPORAL / FRAME SEQUENCE ANALYSIS
+# ---------------------------------------------------------
+
+def get_previous_count(camera):
+    previous_log = (
+        CrowdDensityLog.objects
+        .filter(camera=camera)
+        .order_by("-recorded_at")
+        .first()
+    )
+
+    return previous_log.estimated_crowd_count if previous_log else None
+
+
+def calculate_temporal_analysis(current_count, previous_count, capacity):
+    if previous_count is None:
+        change = 0
+        change_percent = 0.0
+    else:
+        change = current_count - previous_count
+        change_percent = round(
+            change / max(previous_count, 1) * 100,
+            2,
+        )
+
+    capacity_percent = round(
+        current_count / max(capacity, 1) * 100,
+        2,
+    )
+
+    return {
+        "current_count": current_count,
+        "previous_logged_count": previous_count,
+        "count_change": change,
+        "change_percent": change_percent,
+        "capacity_percent": capacity_percent,
+        "sequence_status": (
+            "RAPID_INCREASE"
+            if change >= max(10, int(max(previous_count or 0, 1) * 0.5))
+            else "STABLE_OR_NORMAL"
+        ),
+    }
+
+
+# ---------------------------------------------------------
+# ALTERNATIVE ANOMALY DETECTION
+# ---------------------------------------------------------
+
+def detect_anomalies(
+    current_count,
+    capacity,
+    previous_count,
+    zones,
+    optical_flow,
+):
+    """
+    Explainable rule-based alternative to a trained STCAE model.
+    Results are heuristic indicators, not a validated stampede predictor.
+    """
+    anomalies = []
+
+    capacity_percent = current_count / max(capacity, 1)
+
+    if capacity_percent >= 1.0:
+        anomalies.append({
+            "type": "ABNORMAL_ACCUMULATION",
+            "confidence": 0.95,
+            "severity": "CRITICAL",
+            "reason": "Estimated crowd count reached or exceeded safe capacity.",
+        })
+    elif capacity_percent >= 0.90:
+        anomalies.append({
+            "type": "ABNORMAL_ACCUMULATION",
+            "confidence": 0.85,
+            "severity": "CRITICAL",
+            "reason": "Estimated crowd occupancy is at least 90% of capacity.",
+        })
+    elif capacity_percent >= 0.75:
+        anomalies.append({
+            "type": "PROLONGED_CONGESTION",
+            "confidence": 0.70,
+            "severity": "HIGH",
+            "reason": "Estimated crowd occupancy is at least 75% of capacity.",
+        })
+
+    if previous_count is not None:
+        increase = current_count - previous_count
+        required_increase = max(10, int(max(previous_count, 1) * 0.5))
+
+        if increase >= required_increase:
+            anomalies.append({
+                "type": "STAMPEDE_RUSH",
+                "confidence": 0.75,
+                "severity": "HIGH",
+                "reason": (
+                    f"Count increased by {increase} since the last saved log."
+                ),
+            })
+
+    busiest_zone = max(
+        zones.items(),
+        key=lambda item: item[1]["people_count"],
+    ) if zones else None
+
+    if busiest_zone and current_count >= 10:
+        busiest_count = busiest_zone[1]["people_count"]
+
+        if busiest_count / max(current_count, 1) >= 0.60:
+            anomalies.append({
+                "type": "ABNORMAL_ACCUMULATION",
+                "confidence": 0.65,
+                "severity": "HIGH",
+                "reason": (
+                    f"Most detections are concentrated in zone "
+                    f"{busiest_zone[0]}."
+                ),
+            })
+
+    if (
+        optical_flow.get("available")
+        and optical_flow.get("motion_level") == "HIGH"
+        and current_count >= 10
+    ):
+        anomalies.append({
+            "type": "TURBULENCE",
+            "confidence": 0.60,
+            "severity": "HIGH",
+            "reason": (
+                "High image-motion magnitude detected in a populated frame. "
+                "This alone does not prove panic or stampede."
+            ),
+        })
+
+    return anomalies
+
+
+# ---------------------------------------------------------
+# RISK IDENTIFICATION
+# ---------------------------------------------------------
+
+def identify_risk(current_count, capacity):
+    percentage = current_count / max(capacity, 1) * 100
+
+    if percentage >= 90:
+        return "CRITICAL", "CRITICAL", percentage
+    if percentage >= 75:
+        return "HIGH", "HIGH", percentage
+    if percentage >= 50:
+        return "MODERATE", "MODERATE", percentage
+
+    return "NORMAL", "LOW", percentage
+
+
+def severity_for_anomaly(anomalies):
+    if any(a["severity"] == "CRITICAL" for a in anomalies):
+        return "CRITICAL"
+    if any(a["severity"] == "HIGH" for a in anomalies):
+        return "HIGH"
+    return "MEDIUM"
+
+
+# ---------------------------------------------------------
+# DATABASE: SAVE DENSITY, ANOMALY AND ALERT
+# ---------------------------------------------------------
+
+def save_density_log(camera, count, status, heatmap_bytes):
+    density_log = CrowdDensityLog(
+        camera=camera,
+        estimated_crowd_count=max(0, int(count)),
+        status=status,
+    )
+
+    if heatmap_bytes:
+        density_log.density_map_image.save(
+            f"camera_{camera.pk}_{timezone.now().strftime('%Y%m%d_%H%M%S')}.jpg",
+            ContentFile(heatmap_bytes),
+            save=False,
+        )
+
+    density_log.save()
+    return density_log
+
+
+def save_anomaly_log(camera, anomaly, frame_bytes):
+    anomaly_log = AnomalyDetectionLog(
+        camera=camera,
+        anomaly_type=anomaly["type"],
+        confidence_score=max(
+            0.0,
+            min(1.0, float(anomaly["confidence"])),
+        ),
+    )
+
+    # frame_snapshot is required by the supplied model.
+    anomaly_log.frame_snapshot.save(
+        f"camera_{camera.pk}_anomaly_{timezone.now().strftime('%Y%m%d_%H%M%S_%f')}.jpg",
+        ContentFile(frame_bytes),
+        save=False,
+    )
+
+    anomaly_log.save()
+    return anomaly_log
+
+
+def create_emergency_alert(
+    camera,
+    density_log,
+    anomaly_log,
+    anomalies,
+    risk_level,
+):
+    """
+    Create an in-app alert. No email is sent.
+    Avoid creating a duplicate active alert for the same camera,
+    area and anomaly type within the cooldown period.
+    """
+    if not anomalies and risk_level not in ("HIGH", "CRITICAL"):
+        return None
+
+    area = camera.area
+    severity = severity_for_anomaly(anomalies) if anomalies else (
+        "CRITICAL" if risk_level == "CRITICAL" else "HIGH"
+    )
+
+    if anomalies:
+        primary = max(
+            anomalies,
+            key=lambda a: (
+                2 if a["severity"] == "CRITICAL"
+                else 1 if a["severity"] == "HIGH"
+                else 0,
+                a["confidence"],
+            ),
+        )
+        title = primary["type"].replace("_", " ").title()
+        description = primary["reason"]
+    else:
+        title = f"{risk_level.title()} Crowd Risk"
+        description = (
+            f"Camera {camera.camera_identifier} reports "
+            f"{risk_level.lower()} crowd risk."
+        )
+
+    cooldown_start = timezone.now() - timedelta(
+        seconds=ANOMALY_COOLDOWN_SECONDS
+    )
+
+    existing = EmergencyAlert.objects.filter(
+        area=area,
+        status="ACTIVE",
+        title=title,
+        created_at__gte=cooldown_start,
+    ).first()
+
+    if existing:
+        return existing
+
+    instructions = (
+        "Verify the camera feed and assess the scene. "
+        "If danger is confirmed, notify the responsible safety team, "
+        "keep exits accessible, and follow the site's emergency plan. "
+        "Do not direct people into unsafe routes."
+    )
+
+    return EmergencyAlert.objects.create(
+        area=area,
+        emergency_department=None,
+        density_log=density_log,
+        anomaly_log=anomaly_log,
+        severity=severity,
+        title=title,
+        description=description,
+        public_instructions=instructions,
+        status="ACTIVE",
+    )
+
+
+# ---------------------------------------------------------
+# CAMERA MONITORING PAGE
+# ---------------------------------------------------------
+
+def camera_monitoring(request):
+    cameras = (
+        CCTVCamera.objects
+        .select_related("area")
+        .all()
+        .order_by("camera_identifier")
+    )
+
+    return render(
+        request,
+        "camera/camera_monitoring.html",
+        {"cameras": cameras},
+    )
+
+
+# ---------------------------------------------------------
+# LIVE CROWD PREDICTION API
+# ---------------------------------------------------------
+
+@require_POST
+@csrf_protect
+def live_crowd_predict(request):
+    try:
+        try:
+            payload = json.loads(request.body.decode("utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            return JsonResponse({
+                "status": "error",
+                "message": "Invalid JSON request.",
+            }, status=400)
+
+        camera_id = payload.get("camera_id")
+        frame_string = payload.get("frame")
+
+        if not camera_id or not frame_string:
+            return JsonResponse({
+                "status": "error",
+                "message": "camera_id and frame are required.",
+            }, status=400)
+
+        camera = get_object_or_404(
+            CCTVCamera.objects.select_related("area"),
+            pk=camera_id,
+        )
+
+        frame = decode_frame(frame_string)
+
+        # 1. YOLO person detection
+        yolo_count, people, annotated_frame = detect_people_yolo(frame)
+
+        # 2. CSRNet density estimation, if configured
+        csrnet_count, density_map = predict_csrnet_density(frame)
+
+        # YOLO count is the primary operational count.
+        # CSRNet estimate is returned separately for comparison.
+        current_count = yolo_count
+
+        area = camera.area
+        capacity = max(int(area.max_crowd_capacity or 1), 1)
+
+        # 3. Spatial analysis / zone-wise density
+        height, width = frame.shape[:2]
+        zones = calculate_zone_density(
+            people,
+            width,
+            height,
+            rows=3,
+            cols=3,
+        )
+
+        # 4. Optical flow and crowd motion
+        optical_flow = calculate_optical_flow(camera.pk, frame)
+
+        # 5. Temporal analysis using the previous saved log
+        previous_count = get_previous_count(camera)
+
+        temporal = calculate_temporal_analysis(
+            current_count,
+            previous_count,
+            capacity,
+        )
+
+        # 6. Crowd risk identification
+        crowd_status, risk_level, capacity_percent = identify_risk(
+            current_count,
+            capacity,
+        )
+
+        # 7. Alternative anomaly detection
+        anomalies = detect_anomalies(
+            current_count,
+            capacity,
+            previous_count,
+            zones,
+            optical_flow,
+        )
+
+        # 8. Density heatmap
+        heatmap_overlay = create_density_heatmap(frame, density_map)
+        heatmap_base64 = image_to_base64(heatmap_overlay)
+        annotated_base64 = image_to_base64(annotated_frame)
+
+        _, heatmap_bytes = cv2.imencode(".jpg", heatmap_overlay)
+        _, frame_bytes = cv2.imencode(".jpg", frame)
+
+        now = timezone.now()
+        latest_log = (
+            CrowdDensityLog.objects
+            .filter(camera=camera)
+            .order_by("-recorded_at")
+            .first()
+        )
+
+        should_save_density = (
+            latest_log is None
+            or (now - latest_log.recorded_at).total_seconds()
+            >= MIN_LOG_INTERVAL_SECONDS
+            or bool(anomalies)
+        )
+
+        saved_density_log = None
+        saved_anomaly_logs = []
+        alert_data = None
+
+        with transaction.atomic():
+            # 9. Update Area risk level
+            area.current_risk_level = risk_level
+            area.save(update_fields=["current_risk_level"])
+
+            # 10. Save crowd density record
+            if should_save_density:
+                saved_density_log = save_density_log(
+                    camera,
+                    current_count,
+                    crowd_status,
+                    heatmap_bytes.tobytes(),
+                )
+
+            # 11. Save anomaly records, deduplicated per camera/type
+            for anomaly in anomalies:
+                cooldown_key = (
+                    f"crowdsense_anomaly_{camera.pk}_{anomaly['type']}"
+                )
+
+                if cache.get(cooldown_key):
+                    continue
+
+                anomaly_log = save_anomaly_log(
+                    camera,
+                    anomaly,
+                    frame_bytes.tobytes(),
+                )
+
+                saved_anomaly_logs.append(anomaly_log)
+
+                cache.set(
+                    cooldown_key,
+                    True,
+                    ANOMALY_COOLDOWN_SECONDS,
+                )
+
+            # 12. Create website/database alert, no email
+            if anomalies or risk_level in ("HIGH", "CRITICAL"):
+                density_for_alert = saved_density_log or latest_log
+
+                primary_anomaly_log = (
+                    saved_anomaly_logs[0]
+                    if saved_anomaly_logs
+                    else None
+                )
+
+                alert = create_emergency_alert(
+                    camera=camera,
+                    density_log=density_for_alert,
+                    anomaly_log=primary_anomaly_log,
+                    anomalies=anomalies,
+                    risk_level=risk_level,
+                )
+
+                if alert:
+                    alert_data = {
+                        "id": alert.pk,
+                        "title": alert.title,
+                        "description": alert.description,
+                        "severity": alert.severity,
+                        "status": alert.status,
+                        "public_instructions": alert.public_instructions,
+                        "created_at": alert.created_at.isoformat(),
+                    }
+
+        # STCAE is not loaded here unless you supply a trained model.
+        # This implementation uses the rule-based alternative instead.
+        return JsonResponse({
+            "status": "ok",
+            "camera_id": camera.pk,
+            "camera_identifier": camera.camera_identifier,
+
+            "total_crowd_count": current_count,
+            "yolo_count": yolo_count,
+            "csrnet_count": csrnet_count,
+
+            "capacity": capacity,
+            "capacity_percentage": round(capacity_percent, 2),
+            "crowd_status": crowd_status,
+            "risk_level": risk_level,
+
+            "spatial_analysis": {
+                "zone_count": len(zones),
+                "zones": zones,
+                "busiest_zone": (
+                    max(
+                        zones,
+                        key=lambda zone: zones[zone]["people_count"],
+                    )
+                    if zones else None
+                ),
+            },
+
+            "temporal_analysis": temporal,
+            "frame_sequence_analysis": {
+                "history_length": len(frame_histories.get(camera.pk, [])),
+                "status": temporal["sequence_status"],
+            },
+
+            "crowd_motion": optical_flow,
+            "optical_flow": optical_flow,
+
+            "anomaly_detection": {
+                "method": "Rule-based alternative + spatial/temporal/flow indicators",
+                "stcae_available": False,
+                "stcae_note": (
+                    "A trained STCAE model is not configured. "
+                    "The returned anomalies come from the alternative rules."
+                ),
+                "anomaly_count": len(anomalies),
+                "anomalies": anomalies,
+            },
+
+            "flow_guided_detection": {
+                "available": optical_flow["available"],
+                "motion_level": optical_flow["motion_level"],
+                "note": (
+                    "Optical-flow motion indicators are available; "
+                    "a separately trained flow-guided classifier is not configured."
+                ),
+            },
+
+            "risk_identification": {
+                "risk_level": risk_level,
+                "capacity_percentage": round(capacity_percent, 2),
+                "anomaly_count": len(anomalies),
+            },
+
+            "density_temporal_anomaly": {
+                "count_change": temporal["count_change"],
+                "change_percent": temporal["change_percent"],
+                "capacity_percentage": temporal["capacity_percent"],
+                "anomalies": anomalies,
+            },
+
+            "heatmap": (
+                f"data:image/jpeg;base64,{heatmap_base64}"
+                if heatmap_base64 else None
+            ),
+            "annotated_frame": (
+                f"data:image/jpeg;base64,{annotated_base64}"
+                if annotated_base64 else None
+            ),
+
+            "saved_to_database": (
+                saved_density_log is not None
+                or bool(saved_anomaly_logs)
+            ),
+            "density_log_id": (
+                saved_density_log.pk if saved_density_log else None
+            ),
+            "anomaly_logs_saved": len(saved_anomaly_logs),
+            "alert": alert_data,
+            "alert_created": alert_data is not None,
+            "alert_message": (
+                alert_data["title"] if alert_data else None
+            ),
+            "timestamp": now.isoformat(),
+        })
+
+    except CCTVCamera.DoesNotExist:
+        return JsonResponse({
+            "status": "error",
+            "message": "Camera not found.",
+        }, status=404)
+
+    except ValueError as exc:
+        return JsonResponse({
+            "status": "error",
+            "message": str(exc),
+        }, status=400)
+
+    except Exception as exc:
+        # Log the full traceback in the Django server console.
+        import logging
+        logging.getLogger(__name__).exception(
+            "Live crowd prediction failed"
+        )
+
+        return JsonResponse({
+            "status": "error",
+            "message": "Crowd prediction failed. Check the Django server console.",
+        }, status=500)

@@ -1,0 +1,350 @@
+{% extends 'dept/department_home.html' %}
+{% block body %}
+
+<div style="grid-column: 1 / -1; width: 100%; max-width: 1440px; margin: 0 auto; font-family: var(--font);">
+
+    <!-- Header Section -->
+    <div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <div style="font-size: 0.8rem; color: var(--muted); margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.4rem;">
+                <a href="/myapp/department_home/" style="color: var(--muted); text-decoration: none;">Tactical Terminal</a>
+                <span>/</span>
+                <span style="color: var(--ink); font-weight: 600;">Perimeter & Crowd</span>
+                <span>/</span>
+                <span style="color: var(--ink); font-weight: 600;">High-Density Zones</span>
+            </div>
+            <h2 style="font-size: 1.35rem; font-weight: 600; letter-spacing: -0.02em; color: var(--ink); margin: 0; display: flex; align-items: center; gap: 0.65rem;">
+                <svg style="width: 22px; height: 22px; stroke: var(--hot); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                High-Density Zones & Bottleneck Alert Command
+            </h2>
+            <p style="margin: 0.35rem 0 0; color: var(--muted); font-size: 0.88rem;">
+                Active tracking of critical crowd thresholds, congestion hotspots, and stampede risks across {{ dept.department_code }}.
+            </p>
+        </div>
+
+        <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
+            {% if critical_logs_count > 0 %}
+            <div style="background: #fff; border: 1px solid rgba(255, 77, 77, 0.4); border-radius: 50px; padding: 0.4rem 1rem; font-size: 0.82rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 15px rgba(255, 77, 77, 0.1);">
+                <i style="width: 8px; height: 8px; border-radius: 50%; background: var(--hot); animation: blink 1.4s infinite; display: inline-block;"></i>
+                <span style="color: #c12525;">Overcrowded Incidents: {{ critical_logs_count }}</span>
+            </div>
+            {% endif %}
+
+            <div style="background: #fff; border: 1px solid var(--line); border-radius: 50px; padding: 0.4rem 1rem; font-size: 0.82rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
+                <span style="color: var(--muted);">High Alerts:</span>
+                <span style="color: var(--amber); font-feature-settings: 'tnum'; font-weight: 700;">{{ high_logs_count }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3 Alert Metric Summary Cards -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-bottom: 1.6rem;">
+        
+        <!-- Stampede / Bottleneck Alert Level -->
+        <div style="background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 1.25rem; position: relative; overflow: hidden; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--hot);"></div>
+            <div style="font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Critical Overcrowded Logs</div>
+            <div style="font-size: 2.1rem; font-weight: 700; color: var(--hot); margin: 0.3rem 0 0.1rem; font-feature-settings: 'tnum';">
+                {{ critical_logs_count }}
+            </div>
+            <div style="font-size: 0.76rem; color: var(--muted);">Imminent stampede & crush risk alerts</div>
+        </div>
+
+        <!-- High Density Flux -->
+        <div style="background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 1.25rem; position: relative; overflow: hidden; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--amber);"></div>
+            <div style="font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">High-Density Zone Events</div>
+            <div style="font-size: 2.1rem; font-weight: 700; color: var(--amber); margin: 0.3rem 0 0.1rem; font-feature-settings: 'tnum';">
+                {{ high_logs_count }}
+            </div>
+            <div style="font-size: 0.76rem; color: var(--muted);">Significant pedestrian accumulation</div>
+        </div>
+
+        <!-- Monitored Hotspot Sectors -->
+        <div style="background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 1.25rem; position: relative; overflow: hidden; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--indigo);"></div>
+            <div style="font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Capacity Threatened Sectors</div>
+            <div style="font-size: 2.1rem; font-weight: 700; color: var(--indigo); margin: 0.3rem 0 0.1rem; font-feature-settings: 'tnum';">
+                {{ critical_zones|length }}
+            </div>
+            <div style="font-size: 0.76rem; color: var(--muted);">Zones operating near safety limits (≥70%)</div>
+        </div>
+
+    </div>
+
+    <!-- SECTOR CAPACITY THREAT METERS (Critical Zones Overview) -->
+    {% if critical_zones %}
+    <div style="margin-bottom: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <div>
+                <h3 style="font-size: 1.15rem; font-weight: 600; color: var(--ink); margin: 0; letter-spacing: -0.02em;">
+                    Sectors Approaching / Exceeding Safe Limits
+                </h3>
+                <p style="color: var(--muted); font-size: 0.82rem; margin: 0.15rem 0 0;">
+                    Real-time load factors based on maximum capacity thresholds.
+                </p>
+            </div>
+            <a href="/myapp/dept_assign_tasks/" style="font-size: 0.8rem; font-weight: 700; color: var(--indigo);">
+                Dispatch Personnel →
+            </a>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.2rem;">
+            {% for z in critical_zones %}
+                <div style="background: var(--card); border: 1px solid {% if z.utilization_rate >= 90 %}rgba(255, 77, 77, 0.4){% else %}var(--line){% endif %}; border-radius: 16px; padding: 1.3rem; box-shadow: 0 4px 15px rgba(10, 15, 36, 0.03);">
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.8rem;">
+                        <div>
+                            <div style="font-size: 1rem; font-weight: 700; color: var(--ink);">{{ z.area.name }}</div>
+                            <div style="font-size: 0.76rem; color: var(--muted); margin-top: 0.15rem;">
+                                {{ z.area.city|default:"Kerala" }} · {{ z.camera_count }} Surveillance Sensors
+                            </div>
+                        </div>
+
+                        <span style="font-size: 0.76rem; font-weight: 800; font-family: monospace; padding: 0.2rem 0.6rem; border-radius: 6px; background: {% if z.utilization_rate >= 90 %}#ffe3e3; color: #c12525;{% else %}#fff0d9; color: #a8650a;{% endif %};">
+                            {{ z.utilization_rate }}% Load
+                        </span>
+                    </div>
+
+                    <!-- Utilization Gauge -->
+                    <div style="height: 10px; border-radius: 10px; background: #e9ecf6; overflow: hidden; margin-bottom: 0.85rem;">
+                        <div style="height: 100%; border-radius: 10px; width: {{ z.progress_width }}%; background: {% if z.utilization_rate >= 90 %}var(--hot){% else %}var(--amber){% endif %};"></div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem;">
+                        <span style="color: var(--muted);">Live Headcount: <strong style="color: var(--ink); font-feature-settings: 'tnum'; font-size: 0.95rem;">{{ z.current_headcount }}</strong></span>
+                        <span style="color: var(--muted);">Threshold: <strong style="color: var(--ink); font-feature-settings: 'tnum';">{{ z.capacity }}</strong></span>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- HIGH-DENSITY & CRITICAL TELEMETRY FEED TABLE -->
+    <section style="background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 1.6rem 1.8rem; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <h3 style="font-size: 1.12rem; color: var(--ink); font-weight: 600; margin: 0; letter-spacing: -0.02em;">
+                    High-Density Incident Logs
+                </h3>
+                <p style="color: var(--muted); font-size: 0.82rem; margin: 0.2rem 0 0;">
+                    Consecutive high congestion and overcrowding events requiring field intervention.
+                </p>
+            </div>
+
+            <!-- Filter Controls -->
+            <form method="GET" style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; margin: 0;">
+                <select name="area" style="border: 1px solid var(--line); border-radius: 9px; background: var(--paper); padding: 0.55rem 0.75rem; font-family: inherit; font-size: 0.82rem; color: var(--ink); outline: none;">
+                    <option value="">All Monitored Sectors</option>
+                    {% for a in assigned_areas %}
+                        <option value="{{ a.id }}" {% if area_filter == a.id|stringformat:"s" %}selected{% endif %}>{{ a.name }}</option>
+                    {% endfor %}
+                </select>
+
+                <select name="status" style="border: 1px solid var(--line); border-radius: 9px; background: var(--paper); padding: 0.55rem 0.75rem; font-family: inherit; font-size: 0.82rem; color: var(--ink); outline: none;">
+                    <option value="">All High Levels (High & Critical)</option>
+                    <option value="CRITICAL" {% if status_filter == 'CRITICAL' %}selected{% endif %}>Critical Risk Only</option>
+                    <option value="HIGH" {% if status_filter == 'HIGH' %}selected{% endif %}>High Density Only</option>
+                </select>
+
+                <button type="submit"
+                    onmouseover="this.style.background='var(--indigo)'"
+                    onmouseout="this.style.background='var(--ink)'"
+                    style="border: 0; border-radius: 9px; padding: 0.55rem 1rem; font-weight: 600; font-size: 0.82rem; cursor: pointer; background: var(--ink); color: #fff; transition: background 0.2s; font-family: inherit;">
+                    Filter
+                </button>
+
+                {% if area_filter or status_filter %}
+                    <a href="{% url 'dept_high_density' %}"
+                       onmouseover="this.style.borderColor='var(--ink)'"
+                       onmouseout="this.style.borderColor='var(--line)'"
+                       style="border: 1px solid var(--line); background: #fff; color: var(--muted); border-radius: 9px; padding: 0.5rem 0.85rem; font-size: 0.82rem; font-weight: 600; text-decoration: none; transition: border-color 0.2s;">
+                        Clear
+                    </a>
+                {% endif %}
+            </form>
+        </div>
+
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.86rem;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--line);">
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Timestamp</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">CCTV Sensor</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Congestion Checkpoint</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Detected Headcount</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Danger Classification</th>
+                        <th style="text-align: right; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Action & Heatmap</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for log in high_density_logs %}
+                    <tr onmouseover="this.style.background='#f8f9fd'" onmouseout="this.style.background='transparent'" style="border-bottom: 1px solid var(--line); transition: background 0.15s;">
+                        
+                        <!-- Timestamp -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle; white-space: nowrap;">
+                            <div style="font-weight: 600; color: var(--ink); font-feature-settings: 'tnum'; font-size: 0.84rem;">
+                                {{ log.recorded_at|date:"H:i:s" }}
+                            </div>
+                            <div style="font-size: 0.76rem; color: var(--muted);">
+                                {{ log.recorded_at|date:"M d, Y" }}
+                            </div>
+                        </td>
+
+                        <!-- Camera Identifier -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                            <div style="display: flex; align-items: center; gap: 0.55rem;">
+                                <div style="width: 30px; height: 30px; border-radius: 8px; background: #eef1f8; display: grid; place-items: center; color: var(--indigo); flex-shrink: 0;">
+                                    <svg style="width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;" viewBox="0 0 24 24">
+                                        <path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                                    </svg>
+                                </div>
+                                <span style="font-family: monospace; font-weight: 700; color: var(--ink); font-size: 0.84rem;">
+                                    {{ log.camera.camera_identifier }}
+                                </span>
+                            </div>
+                        </td>
+
+                        <!-- Sector & Location -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                            <span style="display: inline-block; font-size: 0.74rem; font-weight: 600; background: #e8e9ff; color: var(--indigo); border-radius: 50px; padding: 0.1rem 0.55rem; margin-bottom: 0.2rem;">
+                                📍 {{ log.camera.area.name }}
+                            </span>
+                            <div style="font-size: 0.76rem; color: var(--muted);">
+                                {{ log.camera.location_details }}
+                            </div>
+                        </td>
+
+                        <!-- Crowd Count -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                            <div style="display: flex; align-items: baseline; gap: 0.35rem;">
+                                <span style="font-weight: 700; color: {% if log.status == 'CRITICAL' %}var(--hot){% else %}var(--amber){% endif %}; font-feature-settings: 'tnum'; font-size: 1.15rem;">
+                                    {{ log.estimated_crowd_count }}
+                                </span>
+                                <span style="color: var(--muted); font-size: 0.74rem;">citizens</span>
+                            </div>
+                        </td>
+
+                        <!-- Danger Classification -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                            {% if log.status == 'CRITICAL' %}
+                                <span style="display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.25rem 0.7rem; background: #ffe3e3; color: #c12525; box-shadow: 0 0 0 1px rgba(255, 77, 77, 0.25);">
+                                    <i style="width: 6px; height: 6px; border-radius: 50%; background: var(--hot); display: inline-block;"></i> Critical Stampede Risk
+                                </span>
+                            {% else %}
+                                <span style="display: inline-block; font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.25rem 0.7rem; background: #fff0d9; color: #a8650a;">
+                                    High Density Flux
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Actions -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle; text-align: right; white-space: nowrap;">
+                            <div style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                                {% if log.density_map_image %}
+                                    <button type="button"
+                                        onclick="openHeatmapModal('{{ log.density_map_image.url }}', '{{ log.camera.camera_identifier }}', '{{ log.camera.area.name|escapejs }}', '{{ log.camera.location_details|escapejs }}', '{{ log.recorded_at|date:"M d, Y H:i:s" }}', '{{ log.estimated_crowd_count }}', '{{ log.status }}')"
+                                        onmouseover="this.style.borderColor='var(--indigo)'; this.style.color='var(--indigo)';"
+                                        onmouseout="this.style.borderColor='var(--line)'; this.style.color='var(--ink)';"
+                                        style="border: 1px solid var(--line); background: #fff; color: var(--ink); border-radius: 8px; padding: 0.35rem 0.65rem; font-size: 0.78rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; transition: all 0.15s; font-family: inherit;">
+                                        <img src="{{ log.density_map_image.url }}" alt="Heatmap" style="width: 16px; height: 16px; border-radius: 4px; object-fit: cover;">
+                                        Heatmap
+                                    </button>
+                                {% endif %}
+
+                                <a href="/myapp/dept_assign_tasks/?area={{ log.camera.area.id }}"
+                                   onmouseover="this.style.background='var(--indigo)'"
+                                   onmouseout="this.style.background='var(--ink)'"
+                                   style="border: 0; background: var(--ink); color: #fff; border-radius: 8px; padding: 0.35rem 0.75rem; font-size: 0.78rem; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem; transition: background 0.15s;">
+                                    Dispatch Volunteers
+                                </a>
+                            </div>
+                        </td>
+
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 3rem 1rem; color: var(--muted); font-size: 0.88rem;">
+                            No high density or critical overcrowding incidents detected currently in your assigned sectors.
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+</div>
+
+<!-- Heatmap Inspection Modal -->
+<div id="heatmapModalView" style="display: none; position: fixed; inset: 0; background: rgba(10, 15, 36, 0.65); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; padding: 1.5rem;">
+    <div style="background: #fff; border-radius: 18px; max-width: 760px; width: 100%; overflow: hidden; box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35); border: 1px solid var(--line); animation: fadeIn 0.2s ease;">
+        
+        <div style="padding: 1.2rem 1.6rem; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h3 id="modalCamTitle" style="font-size: 1.1rem; font-weight: 600; color: var(--ink); margin: 0;"></h3>
+                <div id="modalCamMeta" style="font-size: 0.78rem; color: var(--muted); margin-top: 0.2rem;"></div>
+            </div>
+            <button type="button" onclick="closeHeatmapModal()" style="border: 0; background: var(--paper); border-radius: 50%; width: 32px; height: 32px; cursor: pointer; display: grid; place-items: center; color: var(--ink); font-weight: bold;">✕</button>
+        </div>
+
+        <div style="padding: 1.2rem; background: #0a0f24; display: grid; place-items: center; min-height: 380px;">
+            <img id="modalImgDisplay" src="" alt="Enlarged Heatmap" style="max-width: 100%; max-height: 480px; object-fit: contain; border-radius: 8px;">
+        </div>
+
+        <div style="padding: 1rem 1.6rem; background: var(--paper); border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <span id="modalRiskBadge" style="font-size: 0.76rem; font-weight: 700; border-radius: 50px; padding: 0.2rem 0.65rem;"></span>
+                <span id="modalHeadcountSpan" style="font-size: 0.8rem; font-weight: 600; color: var(--ink); margin-left: 0.5rem;"></span>
+            </div>
+            
+            <a id="modalDownloadBtn" href="" download target="_blank"
+               style="font-size: 0.82rem; font-weight: 600; color: var(--indigo); text-decoration: none;">
+                Download Heatmap ↗
+            </a>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    function openHeatmapModal(imgUrl, camId, areaName, locationDetails, timestamp, count, status) {
+        document.getElementById('modalImgDisplay').src = imgUrl;
+        document.getElementById('modalCamTitle').textContent = 'Camera: ' + camId + ' (' + areaName + ' - ' + locationDetails + ')';
+        document.getElementById('modalCamMeta').textContent = 'Recorded at: ' + timestamp;
+        document.getElementById('modalHeadcountSpan').textContent = 'Estimated Headcount: ' + count + ' citizens';
+        document.getElementById('modalDownloadBtn').href = imgUrl;
+
+        const badge = document.getElementById('modalRiskBadge');
+        if (status === 'CRITICAL') {
+            badge.textContent = 'CRITICAL OVERCROWDING';
+            badge.style.background = '#ffe3e3';
+            badge.style.color = '#c12525';
+        } else {
+            badge.textContent = 'HIGH DENSITY';
+            badge.style.background = '#fff0d9';
+            badge.style.color = '#a8650a';
+        }
+
+        document.getElementById('heatmapModalView').style.display = 'flex';
+    }
+
+    function closeHeatmapModal() {
+        document.getElementById('heatmapModalView').style.display = 'none';
+        document.getElementById('modalImgDisplay').src = '';
+    }
+
+    document.getElementById('heatmapModalView').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeHeatmapModal();
+        }
+    });
+</script>
+
+{% endblock %}

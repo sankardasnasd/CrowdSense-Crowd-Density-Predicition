@@ -1,0 +1,947 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>CrowdSense - Live Camera Monitoring</title>
+
+    <!-- CSRF token -->
+    <meta name="csrf-token" content="{{ csrf_token }}">
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+    <style>
+        body {
+            background: #f3f6fb;
+            font-family: Arial, sans-serif;
+        }
+
+        .topbar {
+            background: #172554;
+            color: white;
+            padding: 18px 24px;
+        }
+
+        .panel {
+            background: white;
+            border-radius: 14px;
+            padding: 20px;
+            box-shadow: 0 3px 14px rgba(0,0,0,.07);
+            margin-bottom: 20px;
+        }
+
+        .metric {
+            font-size: 30px;
+            font-weight: 700;
+        }
+
+        .metric-label {
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        #video {
+            width: 100%;
+            background: #111827;
+            border-radius: 10px;
+            max-height: 440px;
+            object-fit: contain;
+        }
+
+        #annotatedFrame,
+        #heatmap {
+            width: 100%;
+            border-radius: 10px;
+            background: #e2e8f0;
+            min-height: 100px;
+            object-fit: contain;
+        }
+
+        .risk-badge {
+            display: inline-block;
+            padding: 7px 14px;
+            border-radius: 30px;
+            font-weight: bold;
+            background: #e2e8f0;
+            color: #1e293b;
+        }
+
+        .risk-LOW, .status-NORMAL {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .risk-MODERATE, .status-MODERATE {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .risk-HIGH, .status-HIGH {
+            background: #ffedd5;
+            color: #9a3412;
+        }
+
+        .risk-CRITICAL, .status-CRITICAL {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .zone-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .zone {
+            min-height: 70px;
+            border-radius: 8px;
+            background: #e2e8f0;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .zone strong {
+            display: block;
+            font-size: 22px;
+        }
+
+        .alert-item {
+            border-left: 5px solid #dc2626;
+            background: #fff1f2;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .muted {
+            color: #64748b;
+            font-size: 13px;
+        }
+
+        .section-title {
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+
+        #statusMessage {
+            white-space: pre-wrap;
+        }
+
+        @media (max-width: 768px) {
+            .metric {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<!-- Django CSRF form token -->
+<form id="csrfForm" hidden>
+    {% csrf_token %}
+</form>
+
+<header class="topbar">
+    <div class="container-fluid d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div>
+            <h3 class="mb-1">CrowdSense</h3>
+            <div class="small">AI-Based Live Crowd Monitoring System</div>
+        </div>
+        <span class="badge bg-success" id="connectionStatus">
+            Ready
+        </span>
+    </div>
+</header>
+
+<main class="container-fluid p-3 p-md-4">
+
+    <div class="panel">
+        <div class="row align-items-end g-3">
+            <div class="col-md-5">
+                <label for="cameraSelect" class="form-label fw-bold">
+                    Select CCTV Camera
+                </label>
+
+                <select id="cameraSelect" class="form-select">
+                    <option value="">Select a camera</option>
+
+                    {% for camera in cameras %}
+                    <option value="{{ camera.id }}">
+                        {{ camera.camera_identifier }} -
+                        {{ camera.area.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-7 d-flex flex-wrap gap-2">
+                <button type="button" id="startBtn" class="btn btn-primary">
+                    Start Monitoring
+                </button>
+
+                <button type="button" id="stopBtn"
+                        class="btn btn-danger" disabled>
+                    Stop Monitoring
+                </button>
+
+                <button type="button" id="clearBtn"
+                        class="btn btn-outline-secondary">
+                    Clear Results
+                </button>
+            </div>
+        </div>
+
+        <p class="muted mt-3 mb-0">
+            Camera access requires browser permission. Monitoring uses the
+            selected camera ID and sends captured frames to the Django API.
+        </p>
+
+        <div id="statusMessage" class="alert alert-secondary mt-3 mb-0">
+            Select a camera and click Start Monitoring.
+        </div>
+    </div>
+
+    <!-- Live video and metrics -->
+    <div class="row g-3">
+        <div class="col-lg-7">
+            <div class="panel">
+                <h5 class="section-title">Live Camera Feed</h5>
+                <video id="video" autoplay playsinline muted></video>
+                <canvas id="captureCanvas" hidden></canvas>
+                <div class="muted mt-2" id="lastUpdated">
+                    Waiting for camera...
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="row g-3">
+                <div class="col-6">
+                    <div class="panel">
+                        <div class="metric" id="crowdCount">0</div>
+                        <div class="metric-label">People Detected</div>
+                    </div>
+                </div>
+
+                <div class="col-6">
+                    <div class="panel">
+                        <div class="metric" id="capacity">0%</div>
+                        <div class="metric-label">Capacity Used</div>
+                    </div>
+                </div>
+
+                <div class="col-6">
+                    <div class="panel">
+                        <div class="metric" id="yoloCount">—</div>
+                        <div class="metric-label">YOLO Count</div>
+                    </div>
+                </div>
+
+                <div class="col-6">
+                    <div class="panel">
+                        <div class="metric" id="csrnetCount">—</div>
+                        <div class="metric-label">CSRNet Estimate</div>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <div class="panel">
+                        <div class="metric-label mb-2">Current Risk Level</div>
+                        <span class="risk-badge" id="riskLevel">UNKNOWN</span>
+
+                        <div class="mt-3">
+                            <div class="d-flex justify-content-between">
+                                <span class="metric-label">Capacity</span>
+                                <span id="capacityText">0%</span>
+                            </div>
+                            <div class="progress mt-2" style="height: 12px;">
+                                <div id="capacityBar"
+                                     class="progress-bar"
+                                     style="width: 0%;"
+                                     role="progressbar"
+                                     aria-valuemin="0"
+                                     aria-valuemax="100"
+                                     aria-valuenow="0">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <span class="metric-label">Crowd Status: </span>
+                            <span id="crowdStatus">Waiting</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analysis -->
+    <div class="row g-3">
+        <div class="col-lg-6">
+            <div class="panel">
+                <h5 class="section-title">Spatial Analysis - 3 × 3 Zones</h5>
+                <div class="zone-grid" id="zoneGrid">
+                    {% for i in "123456789" %}
+                    <div class="zone">
+                        <span>Zone {{ i }}</span>
+                        <strong>—</strong>
+                        <small>People</small>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="muted mt-3">
+                    Zone counts depend on the spatial analysis returned by the API.
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="panel">
+                <h5 class="section-title">Temporal Analysis</h5>
+                <p>Previous Count: <strong id="previousCount">—</strong></p>
+                <p>Count Change: <strong id="countChange">—</strong></p>
+                <p>Sudden Increase: <strong id="suddenIncrease">—</strong></p>
+                <hr>
+                <h6>Crowd Motion / Optical Flow</h6>
+                <p>Motion Score: <strong id="motionScore">—</strong></p>
+                <p>Movement Status: <strong id="motionStatus">—</strong></p>
+                <div class="muted">
+                    Optical flow is a motion indicator, not proof of a stampede.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Frames and anomalies -->
+    <div class="row g-3">
+        <div class="col-lg-6">
+            <div class="panel">
+                <h5 class="section-title">Annotated Frame</h5>
+                <img id="annotatedFrame" alt="Annotated camera frame">
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="panel">
+                <h5 class="section-title">Crowd Density Heatmap</h5>
+                <img id="heatmap" alt="Crowd density heatmap">
+                <div class="muted mt-2">
+                    Heatmap quality depends on the configured density-estimation
+                    model. A placeholder heatmap is not a validated density map.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-6">
+            <div class="panel">
+                <h5 class="section-title">Anomaly Detection</h5>
+                <div id="anomalyList">
+                    <p class="text-secondary mb-0">No anomaly data received yet.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="panel">
+                <h5 class="section-title">Emergency Alert</h5>
+                <div id="alertBox">
+                    <p class="text-secondary mb-0">No new alert.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h5 class="section-title">Latest API Response</h5>
+        <pre id="debugOutput" class="small text-wrap mb-0">No response received.</pre>
+    </div>
+
+</main>
+
+<script>
+"use strict";
+
+const API_URL = "{% url 'live_crowd_predict' %}";
+
+const video = document.getElementById("video");
+const canvas = document.getElementById("captureCanvas");
+const ctx = canvas.getContext("2d");
+
+const cameraSelect = document.getElementById("cameraSelect");
+const startBtn = document.getElementById("startBtn");
+const stopBtn = document.getElementById("stopBtn");
+const clearBtn = document.getElementById("clearBtn");
+
+let mediaStream = null;
+let monitoring = false;
+let requestInProgress = false;
+let monitorTimer = null;
+let lastAlertSignature = "";
+
+function getCSRFToken() {
+    // Prefer Django's actual hidden input token.
+    const input = document.querySelector(
+        '#csrfForm input[name="csrfmiddlewaretoken"]'
+    );
+
+    if (input && input.value) {
+        return input.value;
+    }
+
+    // Fallback to the CSRF cookie.
+    const cookie = document.cookie
+        .split("; ")
+        .find(row => row.startsWith("csrftoken="));
+
+    if (cookie) {
+        return decodeURIComponent(cookie.substring("csrftoken=".length));
+    }
+
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.content : "";
+}
+
+function setMessage(message, type = "secondary") {
+    const element = document.getElementById("statusMessage");
+    element.className = "alert alert-" + type + " mt-3 mb-0";
+    element.textContent = message;
+}
+
+function setConnection(text, color = "secondary") {
+    const element = document.getElementById("connectionStatus");
+    element.textContent = text;
+    element.className = "badge bg-" + color;
+}
+
+function numberValue(value, fallback = "—") {
+    if (value === null || value === undefined || value === "") {
+        return fallback;
+    }
+
+    const number = Number(value);
+    return Number.isFinite(number) ? number.toLocaleString() : fallback;
+}
+
+function getNested(object, paths, fallback = undefined) {
+    for (const path of paths) {
+        const value = path.split(".").reduce(
+            (current, key) => current == null ? undefined : current[key],
+            object
+        );
+
+        if (value !== undefined && value !== null) {
+            return value;
+        }
+    }
+
+    return fallback;
+}
+
+function updateRisk(risk) {
+    const element = document.getElementById("riskLevel");
+    const normalized = String(risk || "UNKNOWN").toUpperCase();
+
+    element.textContent = normalized;
+    element.className = "risk-badge risk-" + normalized;
+}
+
+function updateCapacity(percentage) {
+    let value = Number(percentage);
+
+    if (!Number.isFinite(value)) value = 0;
+
+    value = Math.max(0, Math.min(100, value));
+
+    document.getElementById("capacity").textContent =
+        value.toFixed(1) + "%";
+
+    document.getElementById("capacityText").textContent =
+        value.toFixed(1) + "%";
+
+    const bar = document.getElementById("capacityBar");
+    bar.style.width = value + "%";
+    bar.setAttribute("aria-valuenow", String(value));
+
+    bar.className = "progress-bar";
+
+    if (value >= 100) {
+        bar.classList.add("bg-danger");
+    } else if (value >= 75) {
+        bar.classList.add("bg-warning");
+    } else {
+        bar.classList.add("bg-success");
+    }
+}
+
+function renderZones(spatialData) {
+    const grid = document.getElementById("zoneGrid");
+    grid.replaceChildren();
+
+    let zones = [];
+
+    if (Array.isArray(spatialData)) {
+        zones = spatialData;
+    } else if (spatialData && typeof spatialData === "object") {
+        const candidate = spatialData.zones || spatialData.zone_counts;
+        if (Array.isArray(candidate)) {
+            zones = candidate;
+        } else if (candidate && typeof candidate === "object") {
+            zones = Object.entries(candidate).map(([name, value]) => ({
+                name,
+                count: typeof value === "object"
+                    ? (value.count ?? value.people ?? 0)
+                    : value
+            }));
+        }
+    }
+
+    for (let i = 0; i < 9; i++) {
+        const item = zones[i] || {};
+        const zone = document.createElement("div");
+        zone.className = "zone";
+
+        const name = document.createElement("span");
+        name.textContent = item.name || item.zone || ("Zone " + (i + 1));
+
+        const count = document.createElement("strong");
+        const countValue = item.count ?? item.people ?? item.person_count ?? "—";
+        count.textContent = numberValue(countValue);
+
+        const label = document.createElement("small");
+        label.textContent = "People";
+
+        zone.append(name, count, label);
+        grid.appendChild(zone);
+    }
+}
+
+function renderAnomalies(data) {
+    const container = document.getElementById("anomalyList");
+    container.replaceChildren();
+
+    let anomalies = getNested(data, [
+        "anomaly_detection.anomalies",
+        "anomalies"
+    ], []);
+
+    if (anomalies && !Array.isArray(anomalies)) {
+        anomalies = [anomalies];
+    }
+
+    if (!Array.isArray(anomalies) || anomalies.length === 0) {
+        const p = document.createElement("p");
+        p.className = "text-secondary mb-0";
+        p.textContent = "No anomalies reported by the API.";
+        container.appendChild(p);
+        return;
+    }
+
+    anomalies.forEach(item => {
+        const card = document.createElement("div");
+        card.className = "alert-item";
+
+        const title = document.createElement("strong");
+        title.textContent = typeof item === "string"
+            ? item
+            : (item.anomaly_type || item.type || item.name || "Anomaly detected");
+
+        const details = document.createElement("div");
+        details.className = "small mt-1";
+
+        if (typeof item === "object") {
+            const confidence = item.confidence_score ?? item.confidence;
+            details.textContent = confidence !== undefined
+                ? "Confidence: " + numberValue(
+                    Number(confidence) <= 1
+                        ? Number(confidence) * 100
+                        : confidence
+                ) + "%"
+                : (item.description || item.message || "Detected by analysis rules.");
+        } else {
+            details.textContent = "Detected by the API.";
+        }
+
+        card.append(title, details);
+        container.appendChild(card);
+    });
+}
+
+function renderAlert(data) {
+    const box = document.getElementById("alertBox");
+
+    const alertData = getNested(data, ["alert", "emergency_alert"], null);
+    const created = Boolean(data.alert_created);
+
+    if (!alertData && !created) {
+        box.replaceChildren();
+        const p = document.createElement("p");
+        p.className = "text-secondary mb-0";
+        p.textContent = "No new emergency alert returned.";
+        box.appendChild(p);
+        return;
+    }
+
+    const titleText = alertData && typeof alertData === "object"
+        ? (alertData.title || alertData.severity || "Emergency alert")
+        : (typeof alertData === "string" ? alertData : "Emergency alert");
+
+    const descriptionText = alertData && typeof alertData === "object"
+        ? (alertData.description || alertData.message || "")
+        : "";
+
+    const signature = titleText + "|" + descriptionText;
+
+    box.replaceChildren();
+
+    const card = document.createElement("div");
+    card.className = "alert-item";
+
+    const title = document.createElement("strong");
+    title.textContent = titleText;
+
+    const description = document.createElement("p");
+    description.className = "mb-1 mt-2";
+    description.textContent = descriptionText || (
+        created ? "An alert was created by the backend." :
+        "The backend returned an alert."
+    );
+
+    const status = document.createElement("span");
+    status.className = "badge bg-danger";
+    status.textContent = "Check situation";
+
+    card.append(title, description, status);
+    box.appendChild(card);
+
+    if (signature !== lastAlertSignature) {
+        lastAlertSignature = signature;
+        setMessage("Emergency alert returned by the server. Please verify the situation.", "danger");
+    }
+}
+
+function updateDashboard(data) {
+    const count = getNested(data, [
+        "total_crowd_count",
+        "crowd_count",
+        "estimated_crowd_count"
+    ], 0);
+
+    const yolo = getNested(data, ["yolo_count"], "—");
+    const csrnet = getNested(data, ["csrnet_count"], "—");
+    const capacity = getNested(data, [
+        "capacity_percentage",
+        "risk_identification.capacity_percentage"
+    ], 0);
+
+    const risk = getNested(data, [
+        "risk_level",
+        "risk_identification.risk_level"
+    ], "UNKNOWN");
+
+    const status = getNested(data, ["crowd_status", "status"], "—");
+
+    document.getElementById("crowdCount").textContent = numberValue(count, "0");
+    document.getElementById("yoloCount").textContent = numberValue(yolo);
+    document.getElementById("csrnetCount").textContent = numberValue(csrnet);
+    document.getElementById("crowdStatus").textContent = String(status);
+
+    updateCapacity(capacity);
+    updateRisk(risk);
+
+    const previous = getNested(data, [
+        "temporal_analysis.previous_count",
+        "density_temporal_anomaly.previous_count"
+    ], "—");
+
+    const change = getNested(data, [
+        "temporal_analysis.count_change",
+        "temporal_analysis.change",
+        "density_temporal_anomaly.count_change"
+    ], "—");
+
+    const sudden = getNested(data, [
+        "temporal_analysis.sudden_increase",
+        "density_temporal_anomaly.sudden_increase"
+    ], "—");
+
+    document.getElementById("previousCount").textContent = numberValue(previous);
+    document.getElementById("countChange").textContent = numberValue(change);
+    document.getElementById("suddenIncrease").textContent =
+        typeof sudden === "boolean" ? (sudden ? "Yes" : "No") : numberValue(sudden);
+
+    const motionScore = getNested(data, [
+        "crowd_motion.motion_score",
+        "crowd_motion.magnitude",
+        "optical_flow.motion_score",
+        "optical_flow.magnitude"
+    ], "—");
+
+    const motionStatus = getNested(data, [
+        "crowd_motion.status",
+        "crowd_motion.movement_status",
+        "optical_flow.status",
+        "optical_flow.movement_status"
+    ], "—");
+
+    document.getElementById("motionScore").textContent = numberValue(motionScore);
+    document.getElementById("motionStatus").textContent = String(motionStatus);
+
+    renderZones(data.spatial_analysis || data.zone_counts || {});
+    renderAnomalies(data);
+    renderAlert(data);
+
+    const annotated = getNested(data, [
+        "annotated_frame",
+        "annotated_image"
+    ]);
+
+    if (annotated) {
+        document.getElementById("annotatedFrame").src =
+            normalizeImage(annotated);
+    }
+
+    const heatmap = getNested(data, [
+        "heatmap",
+        "density_map",
+        "heatmap_image"
+    ]);
+
+    if (heatmap) {
+        document.getElementById("heatmap").src = normalizeImage(heatmap);
+    }
+
+    document.getElementById("debugOutput").textContent =
+        JSON.stringify(data, null, 2);
+
+    document.getElementById("lastUpdated").textContent =
+        "Last updated: " + new Date().toLocaleTimeString();
+
+    setConnection("Connected", "success");
+
+    if (data.saved_to_database) {
+        setMessage("Live analysis received. Data saved to database.", "success");
+    } else {
+        setMessage("Live analysis received.", "success");
+    }
+}
+
+function normalizeImage(value) {
+    if (typeof value !== "string") return "";
+
+    if (value.startsWith("data:image/") || value.startsWith("blob:") ||
+        value.startsWith("http://") || value.startsWith("https://") ||
+        value.startsWith("/")) {
+        return value;
+    }
+
+    // Assume raw base64 only when returned by the API.
+    return "data:image/jpeg;base64," + value;
+}
+
+async function sendFrame() {
+    if (!monitoring || requestInProgress) return;
+
+    const cameraId = cameraSelect.value;
+
+    if (!cameraId) {
+        setMessage("Please select a CCTV camera.", "warning");
+        stopMonitoring();
+        return;
+    }
+
+    if (!video.videoWidth || !video.videoHeight) {
+        return;
+    }
+
+    requestInProgress = true;
+
+    try {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        const frame = canvas.toDataURL("image/jpeg", 0.8);
+        const csrfToken = getCSRFToken();
+
+        if (!csrfToken) {
+            throw new Error(
+                "CSRF token not found. Reload the page and check that the Django CSRF form is present."
+            );
+        }
+
+        const response = await fetch(API_URL, {
+            method: "POST",
+            credentials: "same-origin",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrfToken,
+                "X-Requested-With": "XMLHttpRequest"
+            },
+            body: JSON.stringify({
+                camera_id: cameraId,
+                frame: frame
+            })
+        });
+
+        const rawResponse = await response.text();
+        let data;
+
+        try {
+            data = JSON.parse(rawResponse);
+        } catch (error) {
+            throw new Error(
+                "The server did not return JSON. HTTP " + response.status +
+                ". Check the Django view and server log."
+            );
+        }
+
+        if (!response.ok) {
+            throw new Error(
+                (data.message || data.error || data.detail ||
+                 "Request failed") + " (HTTP " + response.status + ")"
+            );
+        }
+
+        if (data.status === "error") {
+            throw new Error(data.message || "The analysis API returned an error.");
+        }
+
+        updateDashboard(data);
+
+    } catch (error) {
+        console.error("CrowdSense API error:", error);
+        setConnection("API Error", "danger");
+        setMessage(error.message || "Unable to process the camera frame.", "danger");
+    } finally {
+        requestInProgress = false;
+    }
+}
+
+async function startMonitoring() {
+    if (monitoring) return;
+
+    if (!cameraSelect.value) {
+        setMessage("Please select a CCTV camera first.", "warning");
+        return;
+    }
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setMessage(
+            "Camera access is unavailable. Use localhost or HTTPS and a supported browser.",
+            "danger"
+        );
+        return;
+    }
+
+    try {
+        setMessage("Requesting camera permission...", "info");
+
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+            video: {
+                facingMode: "environment",
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            },
+            audio: false
+        });
+
+        video.srcObject = mediaStream;
+        await video.play();
+
+        monitoring = true;
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        cameraSelect.disabled = true;
+
+        setConnection("Monitoring", "success");
+        setMessage("Camera started. Sending frames for analysis...", "success");
+
+        // Process the first frame immediately, then every 2 seconds.
+        sendFrame();
+        monitorTimer = setInterval(sendFrame, 2000);
+
+    } catch (error) {
+        console.error("Camera startup error:", error);
+        setMessage(
+            "Could not start the camera: " + error.message +
+            ". Check browser camera permission.",
+            "danger"
+        );
+        stopMonitoring();
+    }
+}
+
+function stopMonitoring() {
+    monitoring = false;
+
+    if (monitorTimer) {
+        clearInterval(monitorTimer);
+        monitorTimer = null;
+    }
+
+    if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+        mediaStream = null;
+    }
+
+    video.srcObject = null;
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+    cameraSelect.disabled = false;
+
+    setConnection("Stopped", "secondary");
+}
+
+function clearResults() {
+    document.getElementById("crowdCount").textContent = "0";
+    document.getElementById("yoloCount").textContent = "—";
+    document.getElementById("csrnetCount").textContent = "—";
+    document.getElementById("previousCount").textContent = "—";
+    document.getElementById("countChange").textContent = "—";
+    document.getElementById("suddenIncrease").textContent = "—";
+    document.getElementById("motionScore").textContent = "—";
+    document.getElementById("motionStatus").textContent = "—";
+    document.getElementById("crowdStatus").textContent = "Waiting";
+    document.getElementById("capacity").textContent = "0%";
+    document.getElementById("capacityText").textContent = "0%";
+    document.getElementById("capacityBar").style.width = "0%";
+
+    updateRisk("UNKNOWN");
+
+    document.getElementById("annotatedFrame").removeAttribute("src");
+    document.getElementById("heatmap").removeAttribute("src");
+
+    document.getElementById("anomalyList").textContent =
+        "No anomaly data received yet.";
+    document.getElementById("alertBox").textContent = "No new alert.";
+    document.getElementById("debugOutput").textContent = "No response received.";
+
+    renderZones([]);
+    setMessage("Displayed results cleared. Database records have not been deleted.", "secondary");
+}
+
+startBtn.addEventListener("click", startMonitoring);
+stopBtn.addEventListener("click", stopMonitoring);
+clearBtn.addEventListener("click", clearResults);
+
+window.addEventListener("beforeunload", () => {
+    if (monitorTimer) clearInterval(monitorTimer);
+
+    if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+    }
+});
+</script>
+
+</body>
+</html>

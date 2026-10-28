@@ -1,0 +1,369 @@
+{% extends 'dept/department_home.html' %}
+{% block body %}
+
+<div style="grid-column: 1 / -1; width: 100%; max-width: 1440px; margin: 0 auto; font-family: var(--font);">
+
+    <!-- Header Section -->
+    <div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <div style="font-size: 0.8rem; color: var(--muted); margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.4rem;">
+                <a href="/myapp/department_home/" style="color: var(--muted); text-decoration: none;">Tactical Terminal</a>
+                <span>/</span>
+                <span style="color: var(--ink); font-weight: 600;">Incident Command</span>
+                <span>/</span>
+                <span style="color: var(--ink); font-weight: 600;">Previous Incidents</span>
+            </div>
+            <h2 style="font-size: 1.35rem; font-weight: 600; letter-spacing: -0.02em; color: var(--ink); margin: 0; display: flex; align-items: center; gap: 0.65rem;">
+                <svg style="width: 22px; height: 22px; stroke: var(--calm); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polyline points="12 6 12 12 16 14"/>
+                </svg>
+                Resolved Incidents & Tactical Debriefing Log
+            </h2>
+            <p style="margin: 0.35rem 0 0; color: var(--muted); font-size: 0.88rem;">
+                Historical record of mitigated crowd anomalies, de-escalated threats, and volunteer task completions for {{ dept.department_code }}.
+            </p>
+        </div>
+
+        <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
+            <div style="background: #fff; border: 1px solid var(--line); border-radius: 50px; padding: 0.4rem 1rem; font-size: 0.82rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
+                <i style="width: 7px; height: 7px; border-radius: 50%; background: var(--calm); display: inline-block;"></i>
+                <span style="color: var(--muted);">Mitigated Emergencies:</span>
+                <span style="color: var(--indigo); font-feature-settings: 'tnum'; font-weight: 700;">{{ total_resolved }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4 Post-Incident Metric Cards -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; margin-bottom: 1.6rem;">
+        
+        <!-- Total Resolved -->
+        <div style="background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 1.25rem; position: relative; overflow: hidden; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--calm);"></div>
+            <div style="font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Total Mitigated</div>
+            <div style="font-size: 2.1rem; font-weight: 700; color: var(--calm); margin: 0.3rem 0 0.1rem; font-feature-settings: 'tnum';">
+                {{ total_resolved }}
+            </div>
+            <div style="font-size: 0.76rem; color: var(--muted);">Successfully resolved situations</div>
+        </div>
+
+        <!-- Critical De-escalations -->
+        <div style="background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 1.25rem; position: relative; overflow: hidden; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--hot);"></div>
+            <div style="font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Critical Red Resolved</div>
+            <div style="font-size: 2.1rem; font-weight: 700; color: var(--hot); margin: 0.3rem 0 0.1rem; font-feature-settings: 'tnum';">
+                {{ critical_resolved }}
+            </div>
+            <div style="font-size: 0.76rem; color: var(--muted);">High-risk stampede/rush events averted</div>
+        </div>
+
+        <!-- High Severity Mitigations -->
+        <div style="background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 1.25rem; position: relative; overflow: hidden; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--amber);"></div>
+            <div style="font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">High Emergency Resolved</div>
+            <div style="font-size: 2.1rem; font-weight: 700; color: var(--amber); margin: 0.3rem 0 0.1rem; font-feature-settings: 'tnum';">
+                {{ high_resolved }}
+            </div>
+            <div style="font-size: 0.76rem; color: var(--muted);">Severe crowd build-ups neutralized</div>
+        </div>
+
+        <!-- Medium Level Resolved -->
+        <div style="background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 1.25rem; position: relative; overflow: hidden; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--indigo);"></div>
+            <div style="font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Medium Level Mitigations</div>
+            <div style="font-size: 2.1rem; font-weight: 700; color: var(--indigo); margin: 0.3rem 0 0.1rem; font-feature-settings: 'tnum';">
+                {{ medium_resolved }}
+            </div>
+            <div style="font-size: 0.76rem; color: var(--muted);">Standard flow disruptions cleared</div>
+        </div>
+
+    </div>
+
+    <!-- Main Table Card -->
+    <section style="background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 1.6rem 1.8rem; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+        
+        <!-- Filter Bar -->
+        <form method="GET" style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; margin-bottom: 1.4rem; padding-bottom: 1.2rem; border-bottom: 1px solid var(--line);">
+            
+            <div style="flex: 1; min-width: 220px; display: flex; align-items: center; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 0 0.8rem;">
+                <svg style="width: 15px; height: 15px; stroke: var(--muted); fill: none; stroke-width: 2; stroke-linecap: round; margin-right: 0.5rem;" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input
+                    type="text"
+                    name="search"
+                    placeholder="Search incident title, description, or instructions..."
+                    value="{{ search_query }}"
+                    style="width: 100%; border: 0; background: transparent; padding: 0.65rem 0; font-family: inherit; font-size: 0.85rem; color: var(--ink); outline: none;"
+                >
+            </div>
+
+            <div style="min-width: 160px;">
+                <select name="severity" style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.65rem 0.85rem; font-family: inherit; font-size: 0.84rem; color: var(--ink); outline: none;">
+                    <option value="">All Severities</option>
+                    {% for code, label in severity_choices %}
+                        <option value="{{ code }}" {% if severity_filter == code %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="min-width: 170px;">
+                <select name="area" style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.65rem 0.85rem; font-family: inherit; font-size: 0.84rem; color: var(--ink); outline: none;">
+                    <option value="">All Sectors</option>
+                    {% for a in assigned_areas %}
+                        <option value="{{ a.id }}" {% if area_filter == a.id|stringformat:"s" %}selected{% endif %}>{{ a.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="min-width: 130px;">
+                <input type="date" name="date_from" value="{{ date_from }}"
+                    style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.55rem 0.65rem; font-family: inherit; font-size: 0.82rem; color: var(--ink); outline: none; box-sizing: border-box;">
+            </div>
+
+            <div style="min-width: 130px;">
+                <input type="date" name="date_to" value="{{ date_to }}"
+                    style="width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 0.55rem 0.65rem; font-family: inherit; font-size: 0.82rem; color: var(--ink); outline: none; box-sizing: border-box;">
+            </div>
+
+            <button type="submit"
+                onmouseover="this.style.background='var(--indigo)'"
+                onmouseout="this.style.background='var(--ink)'"
+                style="border: 0; border-radius: 10px; padding: 0.65rem 1.1rem; font-weight: 600; font-size: 0.84rem; cursor: pointer; background: var(--ink); color: #fff; transition: background 0.2s; font-family: inherit;">
+                Filter
+            </button>
+
+            {% if severity_filter or area_filter or date_from or date_to or search_query %}
+                <a href="{% url 'dept_previous_incidents' %}"
+                   onmouseover="this.style.borderColor='var(--ink)'"
+                   onmouseout="this.style.borderColor='var(--line)'"
+                   style="border: 1px solid var(--line); background: #fff; color: var(--muted); border-radius: 10px; padding: 0.6rem 0.9rem; font-size: 0.84rem; font-weight: 600; text-decoration: none; transition: border-color 0.2s;">
+                    Clear
+                </a>
+            {% endif %}
+
+        </form>
+
+        <!-- Incidents Table -->
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.86rem;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--line);">
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Incident Timeline</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Severity & Title</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Sector / Origin</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Trigger Source</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Tasks Issued</th>
+                        <th style="text-align: right; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Resolution Brief</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for inc in resolved_alerts %}
+                    <tr onmouseover="this.style.background='#f8f9fd'" onmouseout="this.style.background='transparent'" style="border-bottom: 1px solid var(--line); transition: background 0.15s;">
+                        
+                        <!-- Timeline -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: top; white-space: nowrap;">
+                            <div style="font-weight: 600; color: var(--ink); font-size: 0.84rem;">
+                                {{ inc.created_at|date:"M d, Y" }}
+                            </div>
+                            <div style="font-size: 0.76rem; color: var(--muted); font-feature-settings: 'tnum';">
+                                {{ inc.created_at|date:"H:i" }} &rarr; {{ inc.updated_at|date:"H:i" }}
+                            </div>
+                            <span style="display: inline-block; font-size: 0.68rem; font-weight: 600; color: #0b6b57; background: #dff7f0; border-radius: 50px; padding: 0.05rem 0.45rem; margin-top: 0.2rem;">
+                                Resolved
+                            </span>
+                        </td>
+
+                        <!-- Severity & Incident Details -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: top;">
+                            <div style="margin-bottom: 0.25rem;">
+                                {% if inc.severity == 'CRITICAL' %}
+                                    <span style="display: inline-block; font-size: 0.7rem; font-weight: 800; border-radius: 50px; padding: 0.15rem 0.55rem; background: #ffe3e3; color: #c12525;">
+                                        Critical Threat
+                                    </span>
+                                {% elif inc.severity == 'HIGH' %}
+                                    <span style="display: inline-block; font-size: 0.7rem; font-weight: 700; border-radius: 50px; padding: 0.15rem 0.55rem; background: #fff0d9; color: #a8650a;">
+                                        High Emergency
+                                    </span>
+                                {% else %}
+                                    <span style="display: inline-block; font-size: 0.7rem; font-weight: 700; border-radius: 50px; padding: 0.15rem 0.55rem; background: #e8e9ff; color: #3a33b0;">
+                                        Medium Attention
+                                    </span>
+                                {% endif %}
+                            </div>
+                            <div style="font-weight: 700; color: var(--ink); font-size: 0.92rem;">
+                                {{ inc.title }}
+                            </div>
+                            <div style="font-size: 0.78rem; color: var(--muted); margin-top: 0.15rem; max-width: 360px; line-height: 1.45;">
+                                {{ inc.description|truncatechars:110 }}
+                            </div>
+                        </td>
+
+                        <!-- Sector -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: top;">
+                            <span style="display: inline-block; font-size: 0.74rem; font-weight: 600; background: #e8e9ff; color: var(--indigo); border-radius: 50px; padding: 0.1rem 0.55rem; margin-bottom: 0.2rem;">
+                                📍 {{ inc.area.name }}
+                            </span>
+                            <div style="font-size: 0.74rem; color: var(--muted);">
+                                {{ inc.area.city|default:"Kerala" }}
+                            </div>
+                        </td>
+
+                        <!-- Trigger Origin -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: top;">
+                            {% if inc.anomaly_log %}
+                                <div style="font-size: 0.78rem; font-weight: 600; color: var(--hot);">
+                                    ⚠️ {{ inc.anomaly_log.get_anomaly_type_display|truncatechars:24 }}
+                                </div>
+                                <div style="font-size: 0.74rem; color: var(--muted);">
+                                    Cam: {{ inc.anomaly_log.camera.camera_identifier }}
+                                </div>
+                            {% elif inc.density_log %}
+                                <div style="font-size: 0.78rem; font-weight: 600; color: var(--amber);">
+                                    👥 Peak: {{ inc.density_log.estimated_crowd_count }} citizens
+                                </div>
+                                <div style="font-size: 0.74rem; color: var(--muted);">
+                                    Cam: {{ inc.density_log.camera.camera_identifier }}
+                                </div>
+                            {% else %}
+                                <span style="color: var(--muted); font-size: 0.78rem;">Manual Dispatch Alert</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Dispatched Tasks Summary -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: top; white-space: nowrap;">
+                            <div style="font-size: 0.84rem; font-weight: 700; color: var(--ink);">
+                                {{ inc.tasks.count }} Task{{ inc.tasks.count|pluralize }}
+                            </div>
+                            <div style="font-size: 0.74rem; color: var(--muted);">
+                                Issued to volunteers
+                            </div>
+                        </td>
+
+                        <!-- Action Button: Open Debrief Modal -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: top; text-align: right; white-space: nowrap;">
+                            <button type="button"
+                                onclick="openIncidentModal('{{ inc.title|escapejs }}', '{{ inc.severity }}', '{{ inc.area.name|escapejs }}', '{{ inc.description|escapejs }}', '{{ inc.public_instructions|escapejs }}', '{{ inc.created_at|date:"M d, Y H:i:s" }}', '{{ inc.updated_at|date:"M d, Y H:i:s" }}', '{{ inc.tasks.count }}')"
+                                onmouseover="this.style.borderColor='var(--indigo)'; this.style.color='var(--indigo)';"
+                                onmouseout="this.style.borderColor='var(--line)'; this.style.color='var(--ink)';"
+                                style="border: 1px solid var(--line); background: #fff; color: var(--ink); border-radius: 8px; padding: 0.4rem 0.8rem; font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: all 0.15s; font-family: inherit; display: inline-flex; align-items: center; gap: 0.35rem;">
+                                <svg style="width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2;" viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+                                </svg>
+                                Inspect Debrief
+                            </button>
+                        </td>
+
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 3.5rem 1rem; color: var(--muted); font-size: 0.88rem;">
+                            No previous resolved incidents found matching your query parameters.
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+</div>
+
+<!-- Debrief Inspection Modal -->
+<div id="incidentDebriefModal" style="display: none; position: fixed; inset: 0; background: rgba(10, 15, 36, 0.65); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; padding: 1.5rem;">
+    <div style="background: #fff; border-radius: 18px; max-width: 680px; width: 100%; overflow: hidden; box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35); border: 1px solid var(--line); animation: fadeIn 0.2s ease;">
+        
+        <div style="padding: 1.2rem 1.6rem; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <span id="modalIncSevBadge" style="font-size: 0.72rem; font-weight: 800; border-radius: 50px; padding: 0.2rem 0.65rem;"></span>
+                <span id="modalIncAreaBadge" style="font-size: 0.72rem; font-weight: 600; background: #e8e9ff; color: var(--indigo); border-radius: 50px; padding: 0.2rem 0.65rem;"></span>
+            </div>
+            <button type="button" onclick="closeIncidentModal()" style="border: 0; background: var(--paper); border-radius: 50%; width: 32px; height: 32px; cursor: pointer; display: grid; place-items: center; color: var(--ink); font-weight: bold;">✕</button>
+        </div>
+
+        <div style="padding: 1.6rem; max-height: calc(85vh - 140px); overflow-y: auto;">
+            <h3 id="modalIncTitle" style="font-size: 1.2rem; font-weight: 700; color: var(--ink); margin: 0 0 0.35rem; letter-spacing: -0.02em;"></h3>
+            
+            <!-- Timeline Metadata -->
+            <div style="background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 0.9rem 1.1rem; margin: 1rem 0 1.2rem; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.8rem; font-size: 0.82rem;">
+                <div>
+                    <div style="color: var(--muted); font-size: 0.74rem;">Triggered At</div>
+                    <div id="modalIncTriggered" style="font-weight: 600; color: var(--ink);"></div>
+                </div>
+                <div>
+                    <div style="color: var(--muted); font-size: 0.74rem;">Resolved At</div>
+                    <div id="modalIncResolved" style="font-weight: 600; color: #0b6b57;"></div>
+                </div>
+                <div>
+                    <div style="color: var(--muted); font-size: 0.74rem;">Dispatched Directives</div>
+                    <div id="modalIncTasksCount" style="font-weight: 600; color: var(--indigo);"></div>
+                </div>
+            </div>
+
+            <!-- Incident Description -->
+            <div style="margin-bottom: 1.2rem;">
+                <label style="display: block; font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.35rem;">
+                    Incident Tactical Brief
+                </label>
+                <div id="modalIncDesc" style="font-size: 0.88rem; color: var(--ink); background: #fbfcfe; padding: 0.9rem 1rem; border-radius: 10px; line-height: 1.5; border: 1px solid var(--line);"></div>
+            </div>
+
+            <!-- Public Evacuation Directives -->
+            <div>
+                <label style="display: block; font-size: 0.76rem; font-weight: 700; color: #a8650a; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.35rem;">
+                    Public Safety Directives Broadcasted
+                </label>
+                <div id="modalIncInstructions" style="font-size: 0.88rem; color: #7c2d12; background: #fffaf0; padding: 0.9rem 1rem; border-radius: 10px; line-height: 1.5; border: 1px solid #fed7aa;"></div>
+            </div>
+        </div>
+
+        <div style="padding: 1rem 1.6rem; background: var(--paper); border-top: 1px solid var(--line); display: flex; justify-content: flex-end;">
+            <button type="button" onclick="closeIncidentModal()"
+                style="border: 0; background: var(--ink); color: #fff; border-radius: 8px; padding: 0.55rem 1.2rem; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit;">
+                Close Debrief
+            </button>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    function openIncidentModal(title, severity, area, desc, instructions, created, resolved, tasksCount) {
+        document.getElementById('modalIncTitle').textContent = title;
+        document.getElementById('modalIncAreaBadge').textContent = '📍 ' + area;
+        document.getElementById('modalIncTriggered').textContent = created;
+        document.getElementById('modalIncResolved').textContent = resolved;
+        document.getElementById('modalIncTasksCount').textContent = tasksCount + ' Tasks Issued';
+        document.getElementById('modalIncDesc').textContent = desc;
+        document.getElementById('modalIncInstructions').textContent = instructions;
+
+        const sevBadge = document.getElementById('modalIncSevBadge');
+        if (severity === 'CRITICAL') {
+            sevBadge.textContent = 'CRITICAL THREAT';
+            sevBadge.style.background = '#ffe3e3';
+            sevBadge.style.color = '#c12525';
+        } else if (severity === 'HIGH') {
+            sevBadge.textContent = 'HIGH EMERGENCY';
+            sevBadge.style.background = '#fff0d9';
+            sevBadge.style.color = '#a8650a';
+        } else {
+            sevBadge.textContent = 'MEDIUM ATTENTION';
+            sevBadge.style.background = '#e8e9ff';
+            sevBadge.style.color = '#3a33b0';
+        }
+
+        document.getElementById('incidentDebriefModal').style.display = 'flex';
+    }
+
+    function closeIncidentModal() {
+        document.getElementById('incidentDebriefModal').style.display = 'none';
+    }
+
+    document.getElementById('incidentDebriefModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeIncidentModal();
+        }
+    });
+</script>
+
+{% endblock %}

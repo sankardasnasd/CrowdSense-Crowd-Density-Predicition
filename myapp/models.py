@@ -212,3 +212,26 @@ class Complaint(models.Model):
     submitted_at = models.DateTimeField(auto_now_add=True)
     resolved_at = models.DateTimeField(null=True, blank=True)
 
+
+
+class Report_Emergency(models.Model):
+
+
+    USER = models.ForeignKey(User_Table, on_delete=models.CASCADE, related_name='user')
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    public_instructions = models.TextField(help_text="Safety guidelines and evacuation instructions for users")
+    status = models.CharField(max_length=20, default='ACTIVE')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class EmergencyInstruction(models.Model):
+    title = models.CharField(max_length=200)
+    instruction_type = models.CharField(max_length=30, default='GENERAL_ADVISORY')
+    severity_level = models.CharField(max_length=20, default='MEDIUM')
+    emergency_department = models.ForeignKey(EmergencyDepartment, on_delete=models.SET_NULL, null=True, blank=True)
+    summary = models.CharField(max_length=300)
+    detailed_steps = models.TextField()
+    do_list = models.TextField(blank=True, null=True)
+    dont_list = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)

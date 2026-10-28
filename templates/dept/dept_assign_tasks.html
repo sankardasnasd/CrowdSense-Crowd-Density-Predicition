@@ -1,0 +1,292 @@
+{% extends 'dept/department_home.html' %}
+{% block body %}
+
+<div style="grid-column: 1 / -1; width: 100%; max-width: 1440px; margin: 0 auto; font-family: var(--font);">
+
+    <!-- Header Section -->
+    <div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <div style="font-size: 0.8rem; color: var(--muted); margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.4rem;">
+                <a href="/myapp/department_home/" style="color: var(--muted); text-decoration: none;">Tactical Terminal</a>
+                <span>/</span>
+                <span style="color: var(--ink); font-weight: 600;">Volunteer Dispatch</span>
+                <span>/</span>
+                <span style="color: var(--ink); font-weight: 600;">Assign Emergency Tasks</span>
+            </div>
+            <h2 style="font-size: 1.35rem; font-weight: 600; letter-spacing: -0.02em; color: var(--ink); margin: 0; display: flex; align-items: center; gap: 0.65rem;">
+                <svg style="width: 22px; height: 22px; stroke: var(--indigo); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;" viewBox="0 0 24 24">
+                    <polyline points="9 11 12 14 22 4"/>
+                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                </svg>
+                Deploy Volunteers to Emergency Tasks
+            </h2>
+            <p style="margin: 0.35rem 0 0; color: var(--muted); font-size: 0.88rem;">
+                Issue targeted tactical instructions and ground directives to on-field volunteers under {{ dept.department_code }}.
+            </p>
+        </div>
+    </div>
+
+    <!-- Django Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div style="padding: 0.75rem 1rem; border-radius: 10px; font-size: 0.84rem; font-weight: 500; margin-bottom: 1.2rem; display: flex; align-items: center; gap: 0.6rem; {% if 'error' in message.tags or 'danger' in message.tags %}background: #ffe3e3; color: #c12525; border: 1px solid rgba(193, 37, 37, 0.2);{% elif 'success' in message.tags %}background: #e1f8f2; color: #0b6b57; border: 1px solid rgba(11, 107, 87, 0.2);{% else %}background: #fff0d9; color: #a8650a; border: 1px solid rgba(168, 101, 10, 0.2);{% endif %}" role="status">
+                <svg style="width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round;" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+                </svg>
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- 2-Column Split: Task Assignment Form & Recent Dispatch Tasks -->
+    <div style="display: grid; grid-template-columns: 460px 1fr; gap: 1.4rem; align-items: start; margin-bottom: 2rem;">
+        
+        <!-- Task Deployment Form Card -->
+        <section style="background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 1.6rem 1.8rem; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+            <h3 style="font-size: 1.12rem; font-weight: 600; color: var(--ink); margin: 0 0 0.35rem; letter-spacing: -0.02em;">
+                New Task Directive
+            </h3>
+            <p style="font-size: 0.82rem; color: var(--muted); margin: 0 0 1.3rem;">
+                Select an active emergency, choose available personnel, and outline directives.
+            </p>
+
+            <form method="POST" action="">
+                {% csrf_token %}
+
+                <!-- Emergency Alert Selection -->
+                <div style="margin-bottom: 1.1rem;">
+                    <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--ink); margin-bottom: 0.35rem;">
+                        Target Active Emergency <span style="color: var(--hot);">*</span>
+                    </label>
+                    <select name="alert_id" required
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); padding: 0.65rem 0.85rem; font-family: inherit; font-size: 0.84rem; color: var(--ink); outline: none;">
+                        <option value="">-- Choose Active Alert --</option>
+                        {% for a in active_alerts %}
+                            <option value="{{ a.id }}" {% if selected_alert_id == a.id|stringformat:"s" %}selected{% endif %}>
+                                [{{ a.get_severity_display }}] {{ a.title }} ({{ a.area.name }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Volunteer Selection -->
+                <div style="margin-bottom: 1.1rem;">
+                    <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--ink); margin-bottom: 0.35rem;">
+                        Assign Field Volunteer <span style="color: var(--hot);">*</span>
+                    </label>
+                    <select name="volunteer_id" required
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); padding: 0.65rem 0.85rem; font-family: inherit; font-size: 0.84rem; color: var(--ink); outline: none;">
+                        <option value="">-- Select Personnel --</option>
+                        {% for v in volunteers %}
+                            <option value="{{ v.id }}" {% if selected_volunteer_id == v.id|stringformat:"s" %}selected{% endif %}>
+                                {{ v.user.name }} ({{ v.get_availability_status_display }}) - {{ v.user.phone }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Task Title -->
+                <div style="margin-bottom: 1.1rem;">
+                    <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--ink); margin-bottom: 0.35rem;">
+                        Task Objective Title <span style="color: var(--hot);">*</span>
+                    </label>
+                    <input type="text" name="title" required
+                        placeholder="e.g., Gate 4 Bottleneck Evacuation Support"
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); padding: 0.65rem 0.85rem; font-family: inherit; font-size: 0.84rem; color: var(--ink); outline: none; box-sizing: border-box;">
+                </div>
+
+                <!-- Tactical Instructions -->
+                <div style="margin-bottom: 1.4rem;">
+                    <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--ink); margin-bottom: 0.35rem;">
+                        Operational Instructions & Directives <span style="color: var(--hot);">*</span>
+                    </label>
+                    <textarea name="instruction" rows="4" required
+                        placeholder="Detail the exact crowd rerouting path, cordon parameters, or safety checks..."
+                        style="width: 100%; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); padding: 0.65rem 0.85rem; font-family: inherit; font-size: 0.84rem; color: var(--ink); outline: none; resize: vertical; box-sizing: border-box;"></textarea>
+                </div>
+
+                <button type="submit"
+                    onmouseover="this.style.background='var(--indigo)'"
+                    onmouseout="this.style.background='var(--ink)'"
+                    style="width: 100%; border: 0; border-radius: 10px; padding: 0.75rem 1rem; font-weight: 600; font-size: 0.86rem; cursor: pointer; background: var(--ink); color: #fff; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: background 0.2s; font-family: inherit;">
+                    <svg style="width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2;" viewBox="0 0 24 24">
+                        <line x1="22" y1="2" x2="11" y2="13"/>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                    </svg>
+                    Dispatch Task Directive
+                </button>
+            </form>
+        </section>
+
+        <!-- Tasks Feed Table -->
+        <section style="background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 1.6rem 1.8rem; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem;">
+                <div>
+                    <h3 style="font-size: 1.12rem; font-weight: 600; color: var(--ink); margin: 0; letter-spacing: -0.02em;">
+                        Dispatched Task History
+                    </h3>
+                    <p style="color: var(--muted); font-size: 0.82rem; margin: 0.15rem 0 0;">
+                        Live volunteer engagement tracking and response statuses.
+                    </p>
+                </div>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.86rem;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid var(--line);">
+                            <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Assigned Time</th>
+                            <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Volunteer</th>
+                            <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Emergency & Task Title</th>
+                            <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Status</th>
+                            <th style="text-align: right; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for task in assigned_tasks %}
+                        <tr onmouseover="this.style.background='#f8f9fd'" onmouseout="this.style.background='transparent'" style="border-bottom: 1px solid var(--line); transition: background 0.15s;">
+                            
+                            <!-- Timestamp -->
+                            <td style="padding: 0.85rem 0.75rem; vertical-align: middle; white-space: nowrap;">
+                                <div style="font-weight: 600; color: var(--ink); font-feature-settings: 'tnum'; font-size: 0.84rem;">
+                                    {{ task.assigned_at|date:"H:i:s" }}
+                                </div>
+                                <div style="font-size: 0.76rem; color: var(--muted);">
+                                    {{ task.assigned_at|date:"M d, Y" }}
+                                </div>
+                            </td>
+
+                            <!-- Volunteer -->
+                            <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                                <div style="font-weight: 600; color: var(--ink);">
+                                    {{ task.volunteer.user.name }}
+                                </div>
+                                <div style="font-size: 0.76rem; color: var(--muted);">
+                                    📞 {{ task.volunteer.user.phone }}
+                                </div>
+                            </td>
+
+                            <!-- Alert & Task Title -->
+                            <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                                <div style="font-weight: 600; color: var(--ink); font-size: 0.9rem;">
+                                    {{ task.title }}
+                                </div>
+                                <div style="font-size: 0.76rem; color: var(--muted); margin-top: 0.15rem;">
+                                    Incident: <strong style="color: var(--indigo);">{{ task.alert.title }}</strong> ({{ task.alert.area.name }})
+                                </div>
+                            </td>
+
+                            <!-- Status -->
+                            <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                                {% if task.status == 'COMPLETED' %}
+                                    <span style="display: inline-block; font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.2rem 0.65rem; background: #dff7f0; color: #0b6b57;">
+                                        Completed
+                                    </span>
+                                {% elif task.status == 'IN_PROGRESS' or task.status == 'ACCEPTED' %}
+                                    <span style="display: inline-block; font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.2rem 0.65rem; background: #fff0d9; color: #a8650a;">
+                                        {{ task.get_status_display }}
+                                    </span>
+                                {% elif task.status == 'DECLINED' %}
+                                    <span style="display: inline-block; font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.2rem 0.65rem; background: #ffe3e3; color: #c12525;">
+                                        Declined
+                                    </span>
+                                {% else %}
+                                    <span style="display: inline-block; font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.2rem 0.65rem; background: #e8e9ff; color: #3a33b0;">
+                                        Pending
+                                    </span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Modal Inspection Trigger -->
+                            <td style="padding: 0.85rem 0.75rem; vertical-align: middle; text-align: right; white-space: nowrap;">
+                                <button type="button"
+                                    onclick="openTaskModal('{{ task.title|escapejs }}', '{{ task.volunteer.user.name|escapejs }}', '{{ task.alert.title|escapejs }}', '{{ task.alert.area.name|escapejs }}', '{{ task.instruction|escapejs }}', '{{ task.get_status_display|escapejs }}', '{{ task.assigned_at|date:"M d, Y H:i" }}')"
+                                    onmouseover="this.style.borderColor='var(--indigo)'; this.style.color='var(--indigo)';"
+                                    onmouseout="this.style.borderColor='var(--line)'; this.style.color='var(--ink)';"
+                                    style="border: 1px solid var(--line); background: #fff; color: var(--ink); border-radius: 8px; padding: 0.35rem 0.65rem; font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: all 0.15s; font-family: inherit;">
+                                    View Directive
+                                </button>
+                            </td>
+
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="5" style="text-align: center; padding: 3rem 1rem; color: var(--muted); font-size: 0.88rem;">
+                                No emergency tasks assigned yet.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </div>
+
+</div>
+
+<!-- Directive Inspection Modal -->
+<div id="taskDirectiveModal" style="display: none; position: fixed; inset: 0; background: rgba(10, 15, 36, 0.65); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; padding: 1.5rem;">
+    <div style="background: #fff; border-radius: 18px; max-width: 620px; width: 100%; overflow: hidden; box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35); border: 1px solid var(--line); animation: fadeIn 0.2s ease;">
+        
+        <div style="padding: 1.2rem 1.6rem; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center;">
+            <h3 id="modalTaskTitle" style="font-size: 1.15rem; font-weight: 700; color: var(--ink); margin: 0;"></h3>
+            <button type="button" onclick="closeTaskModal()" style="border: 0; background: var(--paper); border-radius: 50%; width: 32px; height: 32px; cursor: pointer; display: grid; place-items: center; color: var(--ink); font-weight: bold;">✕</button>
+        </div>
+
+        <div style="padding: 1.6rem;">
+            <div style="background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 0.9rem 1.1rem; margin-bottom: 1.2rem; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.8rem; font-size: 0.82rem;">
+                <div>
+                    <div style="color: var(--muted); font-size: 0.74rem;">Assigned Volunteer</div>
+                    <div id="modalVolunteerName" style="font-weight: 600; color: var(--ink);"></div>
+                </div>
+                <div>
+                    <div style="color: var(--muted); font-size: 0.74rem;">Linked Incident</div>
+                    <div id="modalAlertInfo" style="font-weight: 600; color: var(--indigo);"></div>
+                </div>
+                <div>
+                    <div style="color: var(--muted); font-size: 0.74rem;">Status</div>
+                    <div id="modalTaskStatus" style="font-weight: 600; color: var(--ink);"></div>
+                </div>
+            </div>
+
+            <div>
+                <label style="display: block; font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.4rem;">
+                    Full Operational Instruction
+                </label>
+                <div id="modalInstructionBody" style="font-size: 0.88rem; color: var(--ink); background: #fbfcfe; padding: 1rem; border-radius: 10px; line-height: 1.5; border: 1px solid var(--line);"></div>
+            </div>
+        </div>
+
+        <div style="padding: 1rem 1.6rem; background: var(--paper); border-top: 1px solid var(--line); display: flex; justify-content: flex-end;">
+            <button type="button" onclick="closeTaskModal()"
+                style="border: 0; background: var(--ink); color: #fff; border-radius: 8px; padding: 0.55rem 1.2rem; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit;">
+                Close Preview
+            </button>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    function openTaskModal(title, volunteer, alertTitle, areaName, instruction, status, assignedAt) {
+        document.getElementById('modalTaskTitle').textContent = title;
+        document.getElementById('modalVolunteerName').textContent = volunteer;
+        document.getElementById('modalAlertInfo').textContent = alertTitle + ' (' + areaName + ')';
+        document.getElementById('modalTaskStatus').textContent = status;
+        document.getElementById('modalInstructionBody').textContent = instruction;
+        document.getElementById('taskDirectiveModal').style.display = 'flex';
+    }
+
+    function closeTaskModal() {
+        document.getElementById('taskDirectiveModal').style.display = 'none';
+    }
+
+    document.getElementById('taskDirectiveModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeTaskModal();
+        }
+    });
+</script>
+
+{% endblock %}

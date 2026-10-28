@@ -1,0 +1,366 @@
+{% extends 'dept/department_home.html' %}
+{% block body %}
+
+<div style="grid-column: 1 / -1; width: 100%; max-width: 1440px; margin: 0 auto; font-family: var(--font);">
+
+    <!-- Header Section -->
+    <div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <div style="font-size: 0.8rem; color: var(--muted); margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.4rem;">
+                <a href="/myapp/department_home/" style="color: var(--muted); text-decoration: none;">Tactical Terminal</a>
+                <span>/</span>
+                <span style="color: var(--ink); font-weight: 600;">Perimeter & Crowd</span>
+                <span>/</span>
+                <span style="color: var(--ink); font-weight: 600;">Detected Anomalies</span>
+            </div>
+            <h2 style="font-size: 1.35rem; font-weight: 600; letter-spacing: -0.02em; color: var(--ink); margin: 0; display: flex; align-items: center; gap: 0.65rem;">
+                <svg style="width: 22px; height: 22px; stroke: var(--hot); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;" viewBox="0 0 24 24">
+                    <path d="M12 3l10 18H2z"/>
+                    <path d="M12 10v5M12 18h.01"/>
+                </svg>
+                AI Crowd Vision Anomalies & Incident Feed
+            </h2>
+            <p style="margin: 0.35rem 0 0; color: var(--muted); font-size: 0.88rem;">
+                Real-time automated detections for crowd surges, stampede rushes, counter-flows, and panic turbulence across {{ dept.department_code }} zones.
+            </p>
+        </div>
+
+        <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
+            {% if threat_events_count > 0 %}
+            <div style="background: #fff; border: 1px solid rgba(255, 77, 77, 0.4); border-radius: 50px; padding: 0.4rem 1rem; font-size: 0.82rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 15px rgba(255, 77, 77, 0.08);">
+                <i style="width: 8px; height: 8px; border-radius: 50%; background: var(--hot); animation: blink 1.4s infinite; display: inline-block;"></i>
+                <span style="color: #c12525;">Urgent Threats (Panic/Rush): {{ threat_events_count }}</span>
+            </div>
+            {% endif %}
+
+            <div style="background: #fff; border: 1px solid var(--line); border-radius: 50px; padding: 0.4rem 1rem; font-size: 0.82rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
+                <span style="color: var(--muted);">Total Anomalies Logged:</span>
+                <span style="color: var(--indigo); font-feature-settings: 'tnum'; font-weight: 700;">{{ total_anomalies }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4 High-Level Metric Cards -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; margin-bottom: 1.6rem;">
+        
+        <!-- Urgent Threat Count -->
+        <div style="background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 1.25rem; position: relative; overflow: hidden; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--hot);"></div>
+            <div style="font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Critical Threat Alerts</div>
+            <div style="font-size: 2.1rem; font-weight: 700; color: var(--hot); margin: 0.3rem 0 0.1rem; font-feature-settings: 'tnum';">
+                {{ threat_events_count }}
+            </div>
+            <div style="font-size: 0.76rem; color: var(--muted);">Stampede rush or panic movements</div>
+        </div>
+
+        <!-- Mean Confidence Score -->
+        <div style="background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 1.25rem; position: relative; overflow: hidden; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--indigo);"></div>
+            <div style="font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Mean Confidence Score</div>
+            <div style="font-size: 2.1rem; font-weight: 700; color: var(--indigo); margin: 0.3rem 0 0.1rem; font-feature-settings: 'tnum';">
+                {{ avg_confidence|floatformat:2 }}
+            </div>
+            <div style="font-size: 0.76rem; color: var(--muted);">AI reconstruction confidence (0.00 – 1.00)</div>
+        </div>
+
+        <!-- Peak Detection Certainty -->
+        <div style="background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 1.25rem; position: relative; overflow: hidden; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--mag);"></div>
+            <div style="font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Peak Confidence Detected</div>
+            <div style="font-size: 2.1rem; font-weight: 700; color: var(--mag); margin: 0.3rem 0 0.1rem; font-feature-settings: 'tnum';">
+                {{ peak_confidence|floatformat:2 }}
+            </div>
+            <div style="font-size: 0.76rem; color: var(--muted);">Highest recorded certainty index</div>
+        </div>
+
+        <!-- Active Monitored Cameras -->
+        <div style="background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 1.25rem; position: relative; overflow: hidden; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--amber);"></div>
+            <div style="font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Perimeter Cameras</div>
+            <div style="font-size: 2.1rem; font-weight: 700; color: var(--ink); margin: 0.3rem 0 0.1rem; font-feature-settings: 'tnum';">
+                {{ cameras.count }}
+            </div>
+            <div style="font-size: 0.76rem; color: var(--muted);">Streaming vision telemetry in jurisdiction</div>
+        </div>
+
+    </div>
+
+    <!-- Main Content Table Card -->
+    <section style="background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 1.6rem 1.8rem; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+
+        <!-- Filter Bar -->
+        <form method="GET" style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; margin-bottom: 1.4rem; padding-bottom: 1.2rem; border-bottom: 1px solid var(--line);">
+            
+            <div style="min-width: 190px;">
+                <label style="display: block; font-size: 0.74rem; font-weight: 600; color: var(--muted); margin-bottom: 0.25rem;">Anomaly Pattern</label>
+                <select name="type" style="width: 100%; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); padding: 0.55rem 0.75rem; font-family: inherit; font-size: 0.82rem; color: var(--ink); outline: none;">
+                    <option value="">All Detected Patterns</option>
+                    {% for code, label in anomaly_choices %}
+                        <option value="{{ code }}" {% if type_filter == code %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="min-width: 170px;">
+                <label style="display: block; font-size: 0.74rem; font-weight: 600; color: var(--muted); margin-bottom: 0.25rem;">Assigned Sector</label>
+                <select name="area" style="width: 100%; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); padding: 0.55rem 0.75rem; font-family: inherit; font-size: 0.82rem; color: var(--ink); outline: none;">
+                    <option value="">All Monitored Sectors</option>
+                    {% for a in assigned_areas %}
+                        <option value="{{ a.id }}" {% if area_filter == a.id|stringformat:"s" %}selected{% endif %}>{{ a.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="min-width: 170px;">
+                <label style="display: block; font-size: 0.74rem; font-weight: 600; color: var(--muted); margin-bottom: 0.25rem;">CCTV Camera</label>
+                <select name="camera" style="width: 100%; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); padding: 0.55rem 0.75rem; font-family: inherit; font-size: 0.82rem; color: var(--ink); outline: none;">
+                    <option value="">All Attached Cameras</option>
+                    {% for c in cameras %}
+                        <option value="{{ c.id }}" {% if camera_filter == c.id|stringformat:"s" %}selected{% endif %}>{{ c.camera_identifier }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="min-width: 140px;">
+                <label style="display: block; font-size: 0.74rem; font-weight: 600; color: var(--muted); margin-bottom: 0.25rem;">Date</label>
+                <input type="date" name="date" value="{{ date_filter }}"
+                    style="width: 100%; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); padding: 0.5rem 0.65rem; font-family: inherit; font-size: 0.82rem; color: var(--ink); outline: none; box-sizing: border-box;">
+            </div>
+
+            <div style="margin-top: 1.15rem; display: flex; gap: 0.4rem;">
+                <button type="submit"
+                    onmouseover="this.style.background='var(--indigo)'"
+                    onmouseout="this.style.background='var(--ink)'"
+                    style="border: 0; border-radius: 9px; padding: 0.55rem 1rem; font-weight: 600; font-size: 0.82rem; cursor: pointer; background: var(--ink); color: #fff; transition: background 0.2s; font-family: inherit;">
+                    Filter Logs
+                </button>
+
+                {% if type_filter or area_filter or camera_filter or date_filter %}
+                    <a href="{% url 'dept_view_anomalies' %}"
+                       onmouseover="this.style.borderColor='var(--ink)'"
+                       onmouseout="this.style.borderColor='var(--line)'"
+                       style="border: 1px solid var(--line); background: #fff; color: var(--muted); border-radius: 9px; padding: 0.5rem 0.85rem; font-size: 0.82rem; font-weight: 600; text-decoration: none; transition: border-color 0.2s;">
+                        Clear
+                    </a>
+                {% endif %}
+            </div>
+
+        </form>
+
+        <!-- Anomalies Table -->
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.86rem;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--line);">
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Detection Time</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">CCTV Sensor</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Sector / Checkpoint</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Pattern Classification</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Confidence Meter</th>
+                        <th style="text-align: right; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Media & Field Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for log in anomalies %}
+                    <tr onmouseover="this.style.background='#f8f9fd'" onmouseout="this.style.background='transparent'" style="border-bottom: 1px solid var(--line); transition: background 0.15s;">
+                        
+                        <!-- Timestamp -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle; white-space: nowrap;">
+                            <div style="font-weight: 600; color: var(--ink); font-feature-settings: 'tnum'; font-size: 0.84rem;">
+                                {{ log.detected_at|date:"H:i:s" }}
+                            </div>
+                            <div style="font-size: 0.76rem; color: var(--muted);">
+                                {{ log.detected_at|date:"M d, Y" }}
+                            </div>
+                        </td>
+
+                        <!-- Camera Hardware Identifier -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                            <div style="display: flex; align-items: center; gap: 0.55rem;">
+                                <div style="width: 30px; height: 30px; border-radius: 8px; background: #eef1f8; display: grid; place-items: center; color: var(--indigo); flex-shrink: 0;">
+                                    <svg style="width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;" viewBox="0 0 24 24">
+                                        <path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                                    </svg>
+                                </div>
+                                <span style="font-family: monospace; font-weight: 700; color: var(--ink); font-size: 0.84rem;">
+                                    {{ log.camera.camera_identifier }}
+                                </span>
+                            </div>
+                        </td>
+
+                        <!-- Sector & Point Location -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                            <span style="display: inline-block; font-size: 0.74rem; font-weight: 600; background: #e8e9ff; color: var(--indigo); border-radius: 50px; padding: 0.1rem 0.55rem; margin-bottom: 0.2rem;">
+                                📍 {{ log.camera.area.name }}
+                            </span>
+                            <div style="font-size: 0.76rem; color: var(--muted);">
+                                {{ log.camera.location_details }}
+                            </div>
+                        </td>
+
+                        <!-- Pattern Classification Badge -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                            {% if log.anomaly_type == 'STAMPEDE_RUSH' %}
+                                <span style="display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.2rem 0.65rem; background: #ffe3e3; color: #c12525; box-shadow: 0 0 0 1px rgba(255, 77, 77, 0.25);">
+                                    <i style="width: 6px; height: 6px; border-radius: 50%; background: var(--hot); display: inline-block;"></i> Sudden Stampede / Rush
+                                </span>
+                            {% elif log.anomaly_type == 'TURBULENCE' %}
+                                <span style="display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.2rem 0.65rem; background: #ffe3e3; color: #c12525;">
+                                    Crowd Turbulence / Panic
+                                </span>
+                            {% elif log.anomaly_type == 'ABNORMAL_ACCUMULATION' %}
+                                <span style="display: inline-block; font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.2rem 0.65rem; background: #fff0d9; color: #a8650a;">
+                                    Abnormal Accumulation
+                                </span>
+                            {% elif log.anomaly_type == 'REVERSE_FLOW' %}
+                                <span style="display: inline-block; font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.2rem 0.65rem; background: #e8e9ff; color: #3a33b0;">
+                                    Counter-Flow Movement
+                                </span>
+                            {% else %}
+                                <span style="display: inline-block; font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.2rem 0.65rem; background: #fff0d9; color: #a8650a;">
+                                    Bottleneck Congestion
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Confidence Bar & Score -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                            <div style="display: flex; align-items: center; gap: 0.6rem;">
+                                <div style="height: 6px; border-radius: 6px; background: #e9ecf6; width: 80px; overflow: hidden; flex: none;">
+                                    <div style="height: 100%; border-radius: 6px; width: calc({{ log.confidence_score }} * 100%); background: {% if log.confidence_score >= 0.8 %}var(--hot){% elif log.confidence_score >= 0.5 %}var(--amber){% else %}var(--indigo){% endif %};"></div>
+                                </div>
+                                <span style="font-family: monospace; font-weight: 700; color: var(--ink); font-size: 0.84rem;">
+                                    {{ log.confidence_score|floatformat:2 }}
+                                </span>
+                            </div>
+                        </td>
+
+                        <!-- Media Inspection & Action Dispatch -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: middle; text-align: right; white-space: nowrap;">
+                            <div style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                                {% if log.frame_snapshot %}
+                                    <button type="button"
+                                        onclick="openAnomalyMedia('snapshot', '{{ log.frame_snapshot.url }}', '{{ log.camera.camera_identifier }}', '{{ log.get_anomaly_type_display|escapejs }}', '{{ log.detected_at|date:"M d, Y H:i:s" }}', '{{ log.confidence_score|floatformat:2 }}')"
+                                        onmouseover="this.style.borderColor='var(--indigo)'; this.style.color='var(--indigo)';"
+                                        onmouseout="this.style.borderColor='var(--line)'; this.style.color='var(--ink)';"
+                                        style="border: 1px solid var(--line); background: #fff; color: var(--ink); border-radius: 8px; padding: 0.35rem 0.65rem; font-size: 0.78rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; transition: all 0.15s; font-family: inherit;">
+                                        <svg style="width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2;" viewBox="0 0 24 24">
+                                            <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+                                        </svg>
+                                        Snapshot
+                                    </button>
+                                {% endif %}
+
+                                {% if log.video_clip %}
+                                    <button type="button"
+                                        onclick="openAnomalyMedia('video', '{{ log.video_clip.url }}', '{{ log.camera.camera_identifier }}', '{{ log.get_anomaly_type_display|escapejs }}', '{{ log.detected_at|date:"M d, Y H:i:s" }}', '{{ log.confidence_score|floatformat:2 }}')"
+                                        onmouseover="this.style.background='var(--indigo)'; this.style.color='#fff';"
+                                        onmouseout="this.style.background='#e8e9ff'; this.style.color='var(--indigo)';"
+                                        style="border: 0; background: #e8e9ff; color: var(--indigo); border-radius: 8px; padding: 0.35rem 0.65rem; font-size: 0.78rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; transition: all 0.15s; font-family: inherit;">
+                                        <svg style="width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2;" viewBox="0 0 24 24">
+                                            <polygon points="5 3 19 12 5 21 5 3"/>
+                                        </svg>
+                                        Clip
+                                    </button>
+                                {% endif %}
+
+                                <a href="/myapp/dept_assign_tasks/?area={{ log.camera.area.id }}&anomaly_id={{ log.id }}"
+                                   onmouseover="this.style.background='var(--indigo)'"
+                                   onmouseout="this.style.background='var(--ink)'"
+                                   style="border: 0; background: var(--ink); color: #fff; border-radius: 8px; padding: 0.35rem 0.75rem; font-size: 0.78rem; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem; transition: background 0.15s;">
+                                    Dispatch
+                                </a>
+                            </div>
+                        </td>
+
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 3rem 1rem; color: var(--muted); font-size: 0.88rem;">
+                            No crowd vision anomalies detected for your assigned sectors matching the filter criteria.
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+</div>
+
+<!-- Media Evidence Inspection Modal -->
+<div id="mediaModal" style="display: none; position: fixed; inset: 0; background: rgba(10, 15, 36, 0.65); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; padding: 1.5rem;">
+    <div style="background: #fff; border-radius: 18px; max-width: 760px; width: 100%; overflow: hidden; box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35); border: 1px solid var(--line); animation: fadeIn 0.2s ease;">
+        
+        <div style="padding: 1.2rem 1.6rem; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h3 id="modalTitle" style="font-size: 1.05rem; font-weight: 600; color: var(--ink); margin: 0;"></h3>
+                <div id="modalMeta" style="font-size: 0.78rem; color: var(--muted); margin-top: 0.2rem;"></div>
+            </div>
+            <button type="button" onclick="closeAnomalyMedia()" style="border: 0; background: var(--paper); border-radius: 50%; width: 32px; height: 32px; cursor: pointer; display: grid; place-items: center; color: var(--ink); font-weight: bold;">✕</button>
+        </div>
+
+        <div style="padding: 1rem; background: #0a0f24; display: grid; place-items: center; min-height: 360px;">
+            <img id="modalImg" src="" alt="Anomaly Snapshot" style="display: none; max-width: 100%; max-height: 480px; object-fit: contain; border-radius: 8px;">
+            <video id="modalVideo" src="" controls style="display: none; max-width: 100%; max-height: 480px; border-radius: 8px;"></video>
+        </div>
+
+        <div style="padding: 1rem 1.6rem; background: var(--paper); border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center;">
+            <span id="modalScore" style="font-size: 0.8rem; font-weight: 700;"></span>
+            <a id="modalDownload" href="" download target="_blank"
+               style="font-size: 0.82rem; font-weight: 600; color: var(--indigo); text-decoration: none;">
+                Download Evidence File ↗
+            </a>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    function openAnomalyMedia(kind, mediaUrl, camId, pattern, timestamp, score) {
+        const modal = document.getElementById('mediaModal');
+        const img = document.getElementById('modalImg');
+        const vid = document.getElementById('modalVideo');
+        const title = document.getElementById('modalTitle');
+        const meta = document.getElementById('modalMeta');
+        const scoreEl = document.getElementById('modalScore');
+        const download = document.getElementById('modalDownload');
+
+        title.textContent = pattern + ' (' + camId + ')';
+        meta.textContent = 'Detected: ' + timestamp;
+        scoreEl.textContent = 'Confidence Index: ' + score;
+        scoreEl.style.color = parseFloat(score) >= 0.8 ? '#c12525' : '#4338ca';
+        download.href = mediaUrl;
+
+        if (kind === 'snapshot') {
+            vid.pause();
+            vid.style.display = 'none';
+            img.src = mediaUrl;
+            img.style.display = 'block';
+        } else {
+            img.style.display = 'none';
+            vid.src = mediaUrl;
+            vid.style.display = 'block';
+            vid.play();
+        }
+
+        modal.style.display = 'flex';
+    }
+
+    function closeAnomalyMedia() {
+        const modal = document.getElementById('mediaModal');
+        const vid = document.getElementById('modalVideo');
+        vid.pause();
+        vid.src = '';
+        document.getElementById('modalImg').src = '';
+        modal.style.display = 'none';
+    }
+
+    document.getElementById('mediaModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeAnomalyMedia();
+        }
+    });
+</script>
+
+{% endblock %}
