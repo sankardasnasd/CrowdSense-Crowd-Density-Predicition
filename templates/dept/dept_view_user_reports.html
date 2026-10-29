@@ -1,0 +1,412 @@
+{% extends 'dept/department_home.html' %}
+{% block body %}
+
+<style>
+    @keyframes blink {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.3; transform: scale(0.85); }
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(6px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+
+<div style="grid-column: 1 / -1; width: 100%; max-width: 1440px; margin: 0 auto; font-family: var(--font);">
+
+    <!-- Header Section -->
+    <div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <div style="font-size: 0.8rem; color: var(--muted); margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.4rem;">
+                <a href="/myapp/department_home/" style="color: var(--muted); text-decoration: none;">Tactical Terminal</a>
+                <span>/</span>
+                <span style="color: var(--ink); font-weight: 600;">Citizen Intelligence</span>
+                <span>/</span>
+                <span style="color: var(--ink); font-weight: 600;">Area Emergency Reports</span>
+            </div>
+            <h2 style="font-size: 1.35rem; font-weight: 600; letter-spacing: -0.02em; color: var(--ink); margin: 0; display: flex; align-items: center; gap: 0.65rem;">
+                <svg style="width: 22px; height: 22px; stroke: var(--hot); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;" viewBox="0 0 24 24">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+                Citizen Emergency Reports in Jurisdiction
+            </h2>
+            <p style="margin: 0.35rem 0 0; color: var(--muted); font-size: 0.88rem;">
+                Incoming hazard submissions and emergency requests from citizens located within {{ dept.department_name }}'s assigned sectors.
+            </p>
+        </div>
+
+        <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
+            {% if active_reports > 0 %}
+            <div style="background: #fff; border: 1px solid rgba(255, 77, 77, 0.4); border-radius: 50px; padding: 0.4rem 1rem; font-size: 0.82rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 15px rgba(255, 77, 77, 0.1);">
+                <i style="width: 8px; height: 8px; border-radius: 50%; background: var(--hot); animation: blink 1.4s infinite; display: inline-block;"></i>
+                <span style="color: #c12525;">Active Incidents: {{ active_reports }}</span>
+            </div>
+            {% endif %}
+
+            <div style="background: #fff; border: 1px solid var(--line); border-radius: 50px; padding: 0.4rem 1rem; font-size: 0.82rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
+                <span style="color: var(--muted);">Monitored Sectors:</span>
+                <span style="color: var(--indigo); font-weight: 700;">{{ assigned_areas.count }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Django Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div style="padding: 0.75rem 1rem; border-radius: 10px; font-size: 0.84rem; font-weight: 500; margin-bottom: 1.2rem; display: flex; align-items: center; gap: 0.6rem; {% if 'error' in message.tags or 'danger' in message.tags %}background: #ffe3e3; color: #c12525; border: 1px solid rgba(193, 37, 37, 0.2);{% elif 'success' in message.tags %}background: #e1f8f2; color: #0b6b57; border: 1px solid rgba(11, 107, 87, 0.2);{% else %}background: #fff0d9; color: #a8650a; border: 1px solid rgba(168, 101, 10, 0.2);{% endif %}" role="status">
+                <svg style="width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round;" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+                </svg>
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Metric HUD Summary Cards -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; margin-bottom: 1.6rem;">
+        
+        <div style="background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 1.25rem; position: relative; overflow: hidden; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--hot);"></div>
+            <div style="font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Pending Action</div>
+            <div style="font-size: 2.1rem; font-weight: 700; color: var(--hot); margin: 0.3rem 0 0.1rem; font-feature-settings: 'tnum';">
+                {{ active_reports }}
+            </div>
+            <div style="font-size: 0.76rem; color: var(--muted);">Active citizen calls in your zones</div>
+        </div>
+
+        <div style="background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 1.25rem; position: relative; overflow: hidden; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--amber);"></div>
+            <div style="font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Under Control</div>
+            <div style="font-size: 2.1rem; font-weight: 700; color: var(--amber); margin: 0.3rem 0 0.1rem; font-feature-settings: 'tnum';">
+                {{ under_control_reports }}
+            </div>
+            <div style="font-size: 0.76rem; color: var(--muted);">Intervention in progress</div>
+        </div>
+
+        <div style="background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 1.25rem; position: relative; overflow: hidden; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--calm);"></div>
+            <div style="font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Resolved Incidents</div>
+            <div style="font-size: 2.1rem; font-weight: 700; color: var(--calm); margin: 0.3rem 0 0.1rem; font-feature-settings: 'tnum';">
+                {{ resolved_reports }}
+            </div>
+            <div style="font-size: 0.76rem; color: var(--muted);">Verified and contained</div>
+        </div>
+
+        <div style="background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 1.25rem; position: relative; overflow: hidden; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--indigo);"></div>
+            <div style="font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Total Received</div>
+            <div style="font-size: 2.1rem; font-weight: 700; color: var(--ink); margin: 0.3rem 0 0.1rem; font-feature-settings: 'tnum';">
+                {{ total_reports }}
+            </div>
+            <div style="font-size: 0.76rem; color: var(--muted);">Cumulative sector reports</div>
+        </div>
+
+    </div>
+
+    <!-- Main Table Container -->
+    <section style="background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 1.6rem 1.8rem; box-shadow: 0 4px 20px rgba(10, 15, 36, 0.03);">
+        
+        <!-- Filter Toolbar -->
+        <form method="GET" style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; margin-bottom: 1.4rem; padding-bottom: 1.2rem; border-bottom: 1px solid var(--line);">
+            
+            <div style="min-width: 170px;">
+                <label style="display: block; font-size: 0.74rem; font-weight: 600; color: var(--muted); margin-bottom: 0.25rem;">Sector / Area</label>
+                <select name="area" style="width: 100%; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); padding: 0.55rem 0.75rem; font-family: inherit; font-size: 0.82rem; color: var(--ink); outline: none;">
+                    <option value="">All Assigned Areas</option>
+                    {% for a in assigned_areas %}
+                        <option value="{{ a.id }}" {% if area_filter == a.id|stringformat:"s" %}selected{% endif %}>{{ a.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="min-width: 160px;">
+                <label style="display: block; font-size: 0.74rem; font-weight: 600; color: var(--muted); margin-bottom: 0.25rem;">Incident Status</label>
+                <select name="status" style="width: 100%; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); padding: 0.55rem 0.75rem; font-family: inherit; font-size: 0.82rem; color: var(--ink); outline: none;">
+                    <option value="">All Statuses</option>
+                    <option value="ACTIVE" {% if status_filter == 'ACTIVE' %}selected{% endif %}>Active</option>
+                    <option value="UNDER_CONTROL" {% if status_filter == 'UNDER_CONTROL' %}selected{% endif %}>Under Control</option>
+                    <option value="RESOLVED" {% if status_filter == 'RESOLVED' %}selected{% endif %}>Resolved</option>
+                </select>
+            </div>
+
+            <div style="min-width: 140px;">
+                <label style="display: block; font-size: 0.74rem; font-weight: 600; color: var(--muted); margin-bottom: 0.25rem;">Incident Date</label>
+                <input type="date" name="date" value="{{ date_filter }}"
+                    style="width: 100%; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); padding: 0.5rem 0.65rem; font-family: inherit; font-size: 0.82rem; color: var(--ink); outline: none; box-sizing: border-box;">
+            </div>
+
+            <div style="flex: 1; min-width: 200px;">
+                <label style="display: block; font-size: 0.74rem; font-weight: 600; color: var(--muted); margin-bottom: 0.25rem;">Search Citizen / Title</label>
+                <input type="text" name="search" value="{{ search_query }}" placeholder="Filter by citizen name, phone, title..."
+                    style="width: 100%; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); padding: 0.52rem 0.75rem; font-family: inherit; font-size: 0.82rem; color: var(--ink); outline: none; box-sizing: border-box;">
+            </div>
+
+            <div style="margin-top: 1.15rem; display: flex; gap: 0.4rem;">
+                <button type="submit"
+                    onmouseover="this.style.background='var(--indigo)'"
+                    onmouseout="this.style.background='var(--ink)'"
+                    style="border: 0; border-radius: 9px; padding: 0.55rem 1rem; font-weight: 600; font-size: 0.82rem; cursor: pointer; background: var(--ink); color: #fff; transition: background 0.2s; font-family: inherit;">
+                    Filter Reports
+                </button>
+
+                {% if status_filter or area_filter or date_filter or search_query %}
+                    <a href="{% url 'dept_view_user_reports' %}"
+                       style="border: 1px solid var(--line); background: #fff; color: var(--muted); border-radius: 9px; padding: 0.5rem 0.85rem; font-size: 0.82rem; font-weight: 600; text-decoration: none;">
+                        Clear
+                    </a>
+                {% endif %}
+            </div>
+
+        </form>
+
+        <!-- Reports Table -->
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.86rem;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--line);">
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Report Time</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem;">Incident & Details</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Sector / Location</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem;">Reported Citizen</th>
+                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Status</th>
+                        <th style="text-align: right; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Triage Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for r in reports %}
+                    <tr onmouseover="this.style.background='#f8f9fd'" onmouseout="this.style.background='transparent'" style="border-bottom: 1px solid var(--line); transition: background 0.15s; {% if r.status == 'ACTIVE' %}background: #fff8f8;{% endif %}">
+                        
+                        <!-- Time -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: top; white-space: nowrap;">
+                            <div style="font-weight: 600; color: var(--ink); font-feature-settings: 'tnum'; font-size: 0.84rem;">
+                                {{ r.created_at|date:"H:i" }}
+                            </div>
+                            <div style="font-size: 0.76rem; color: var(--muted);">
+                                {{ r.created_at|date:"M d, Y" }}
+                            </div>
+                        </td>
+
+                        <!-- Title & Description -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: top;">
+                            <div style="font-weight: 700; color: var(--ink); font-size: 0.92rem;">
+                                {{ r.title }}
+                            </div>
+                            <div style="font-size: 0.8rem; color: var(--muted); margin-top: 0.2rem; line-height: 1.4; max-width: 380px;">
+                                {{ r.description }}
+                            </div>
+                            {% if r.public_instructions %}
+                                <div style="margin-top: 0.35rem; font-size: 0.75rem; color: var(--amber); background: #fffaf0; border: 1px solid #ffe8cc; border-radius: 6px; padding: 0.2rem 0.5rem; display: inline-block;">
+                                    📢 Safety: {{ r.public_instructions|truncatechars:45 }}
+                                </div>
+                            {% endif %}
+                        </td>
+
+                        <!-- Sector Area -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: top; white-space: nowrap;">
+                            {% if r.USER.area %}
+                                <span style="display: inline-block; font-size: 0.74rem; font-weight: 600; background: #e8e9ff; color: var(--indigo); border-radius: 50px; padding: 0.12rem 0.6rem; margin-bottom: 0.2rem;">
+                                    📍 {{ r.USER.area.name }}
+                                </span>
+                                <div style="font-size: 0.74rem; color: var(--muted);">
+                                    {{ r.USER.area.city }}, {{ r.USER.area.district }}
+                                </div>
+                            {% else %}
+                                <span style="color: var(--muted); font-size: 0.74rem;">Unspecified Area</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Citizen Profile -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: top;">
+                            <div style="font-weight: 600; color: var(--ink); font-size: 0.84rem;">
+                                {{ r.USER.name }}
+                            </div>
+                            <div style="font-size: 0.76rem; color: var(--muted); margin-top: 0.1rem;">
+                                📞 {{ r.USER.phone }}
+                            </div>
+                            <div style="font-size: 0.74rem; color: var(--muted);">
+                                📍 {{ r.USER.place }}
+                            </div>
+                        </td>
+
+                        <!-- Status Badge -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: top; white-space: nowrap;">
+                            {% if r.status == 'ACTIVE' %}
+                                <span style="display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.72rem; font-weight: 800; border-radius: 50px; padding: 0.2rem 0.65rem; background: #ffe3e3; color: #c12525;">
+                                    <i style="width: 5px; height: 5px; border-radius: 50%; background: var(--hot); display: inline-block;"></i> Active
+                                </span>
+                            {% elif r.status == 'UNDER_CONTROL' %}
+                                <span style="display: inline-block; font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.2rem 0.65rem; background: #fff0d9; color: #a8650a;">
+                                    Under Control
+                                </span>
+                            {% else %}
+                                <span style="display: inline-block; font-size: 0.72rem; font-weight: 700; border-radius: 50px; padding: 0.2rem 0.65rem; background: #dff7f0; color: #0b6b57;">
+                                    Resolved
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Triage Actions -->
+                        <td style="padding: 0.85rem 0.75rem; vertical-align: top; text-align: right; white-space: nowrap;">
+                            <div style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                                
+                                <!-- Inspect Modal Trigger -->
+                                <button type="button"
+                                    onclick="openUserReportModal(
+                                        '{{ r.title|escapejs }}',
+                                        '{{ r.USER.name|escapejs }}',
+                                        '{{ r.USER.phone|escapejs }}',
+                                        '{{ r.USER.area.name|default:"Unknown Area"|escapejs }}',
+                                        '{{ r.USER.place|escapejs }}',
+                                        '{{ r.description|escapejs }}',
+                                        '{{ r.public_instructions|default:"No explicit public instructions logged."|escapejs }}',
+                                        '{{ r.created_at|date:"M d, Y H:i" }}',
+                                        '{{ r.status }}'
+                                    )"
+                                    style="border: 1px solid var(--line); background: #fff; color: var(--ink); border-radius: 8px; padding: 0.35rem 0.65rem; font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: all 0.15s; font-family: inherit;">
+                                    Details
+                                </button>
+
+                                <!-- Status Control Buttons -->
+                                {% if r.status == 'ACTIVE' %}
+                                    <form method="POST" action="{% url 'dept_update_user_report_status' r.id %}" style="display: inline; margin: 0;">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="acknowledge">
+                                        <button type="submit"
+                                            style="border: 1px solid #ffd599; background: #fff0d9; color: #a8650a; border-radius: 8px; padding: 0.35rem 0.65rem; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.15s; font-family: inherit;">
+                                            Acknowledge
+                                        </button>
+                                    </form>
+                                {% elif r.status == 'UNDER_CONTROL' %}
+                                    <form method="POST" action="{% url 'dept_update_user_report_status' r.id %}" style="display: inline; margin: 0;">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="resolve">
+                                        <button type="submit"
+                                            style="border: 1px solid rgba(25,195,166,0.3); background: #dff7f0; color: #0b6b57; border-radius: 8px; padding: 0.35rem 0.65rem; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.15s; font-family: inherit;">
+                                            Resolve
+                                        </button>
+                                    </form>
+                                {% endif %}
+
+                            </div>
+                        </td>
+
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 3rem 1rem; color: var(--muted); font-size: 0.88rem;">
+                            No citizen emergency reports logged for your assigned sectors matching the filter criteria.
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+</div>
+
+<!-- Inspection Modal for Citizen Report Details -->
+<div id="userReportModal" style="display: none; position: fixed; inset: 0; background: rgba(10, 15, 36, 0.65); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; padding: 1.5rem;">
+    <div style="background: #fff; border-radius: 18px; max-width: 650px; width: 100%; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3); border: 1px solid var(--line); animation: fadeIn 0.2s ease;">
+        
+        <div style="padding: 1.2rem 1.6rem; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <span id="modalReportStatus" style="font-size: 0.72rem; font-weight: 800; border-radius: 50px; padding: 0.2rem 0.65rem;"></span>
+                <span id="modalReportArea" style="font-size: 0.72rem; font-weight: 600; background: #e8e9ff; color: var(--indigo); border-radius: 50px; padding: 0.2rem 0.65rem;"></span>
+            </div>
+            <button type="button" onclick="closeUserReportModal()" style="border: 0; background: var(--paper); border-radius: 50%; width: 32px; height: 32px; cursor: pointer; display: grid; place-items: center; color: var(--ink); font-weight: bold;">✕</button>
+        </div>
+
+        <div style="overflow-y: auto; padding: 1.6rem;">
+            <h3 id="modalReportTitle" style="font-size: 1.2rem; font-weight: 700; color: var(--ink); margin: 0 0 0.35rem; letter-spacing: -0.02em;"></h3>
+            <div id="modalReportMeta" style="font-size: 0.78rem; color: var(--muted); margin-bottom: 1.2rem;"></div>
+
+            <!-- Citizen Details Box -->
+            <div style="background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 0.85rem 1rem; margin-bottom: 1.2rem; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.6rem;">
+                <div>
+                    <div style="font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase;">Reporting Citizen</div>
+                    <div id="modalReporterName" style="font-size: 0.88rem; font-weight: 700; color: var(--ink); margin-top: 0.15rem;"></div>
+                </div>
+                <div>
+                    <div style="font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase;">Contact Number</div>
+                    <div id="modalReporterPhone" style="font-size: 0.88rem; font-weight: 600; color: var(--ink); margin-top: 0.15rem;"></div>
+                </div>
+                <div>
+                    <div style="font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase;">Registered Locality</div>
+                    <div id="modalReporterPlace" style="font-size: 0.88rem; font-weight: 600; color: var(--ink); margin-top: 0.15rem;"></div>
+                </div>
+            </div>
+
+            <!-- Description -->
+            <div style="margin-bottom: 1.2rem;">
+                <label style="display: block; font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.35rem;">
+                    Citizen Incident Narrative
+                </label>
+                <div id="modalReportDesc" style="font-size: 0.88rem; color: var(--ink); background: var(--paper); padding: 0.85rem 1rem; border-radius: 10px; line-height: 1.5; border: 1px solid var(--line); white-space: pre-line;"></div>
+            </div>
+
+            <!-- Safety Instructions -->
+            <div>
+                <label style="display: block; font-size: 0.76rem; font-weight: 700; color: var(--hot); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.35rem;">
+                    Immediate Safety Guidelines Logged
+                </label>
+                <div id="modalReportInstructions" style="font-size: 0.86rem; color: #7f1d1d; background: #fff5f5; padding: 0.85rem 1rem; border-radius: 10px; line-height: 1.5; border: 1px solid #fed7d7; white-space: pre-line;"></div>
+            </div>
+        </div>
+
+        <div style="padding: 1rem 1.6rem; background: var(--paper); border-top: 1px solid var(--line); display: flex; justify-content: flex-end;">
+            <button type="button" onclick="closeUserReportModal()"
+                style="border: 0; background: var(--ink); color: #fff; border-radius: 8px; padding: 0.55rem 1.2rem; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit;">
+                Dismiss Preview
+            </button>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    function openUserReportModal(title, name, phone, area, place, desc, instructions, date, status) {
+        document.getElementById('modalReportTitle').textContent = title;
+        document.getElementById('modalReportArea').textContent = '📍 ' + area;
+        document.getElementById('modalReportMeta').textContent = 'Submitted on: ' + date;
+        document.getElementById('modalReporterName').textContent = name;
+        document.getElementById('modalReporterPhone').textContent = phone;
+        document.getElementById('modalReporterPlace').textContent = place;
+        document.getElementById('modalReportDesc').textContent = desc;
+        document.getElementById('modalReportInstructions').textContent = instructions;
+
+        const statusBadge = document.getElementById('modalReportStatus');
+        if (status === 'ACTIVE') {
+            statusBadge.textContent = 'ACTIVE ALERT';
+            statusBadge.style.background = '#ffe3e3';
+            statusBadge.style.color = '#c12525';
+        } else if (status === 'UNDER_CONTROL') {
+            statusBadge.textContent = 'UNDER CONTROL';
+            statusBadge.style.background = '#fff0d9';
+            statusBadge.style.color = '#a8650a';
+        } else {
+            statusBadge.textContent = 'RESOLVED';
+            statusBadge.style.background = '#dff7f0';
+            statusBadge.style.color = '#0b6b57';
+        }
+
+        document.getElementById('userReportModal').style.display = 'flex';
+    }
+
+    function closeUserReportModal() {
+        document.getElementById('userReportModal').style.display = 'none';
+    }
+
+    window.addEventListener('click', function(e) {
+        const modal = document.getElementById('userReportModal');
+        if (e.target === modal) closeUserReportModal();
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeUserReportModal();
+    });
+</script>
+
+{% endblock %}

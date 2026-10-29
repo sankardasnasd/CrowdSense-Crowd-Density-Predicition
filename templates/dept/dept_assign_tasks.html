@@ -79,7 +79,7 @@
                         <option value="">-- Select Personnel --</option>
                         {% for v in volunteers %}
                             <option value="{{ v.id }}" {% if selected_volunteer_id == v.id|stringformat:"s" %}selected{% endif %}>
-                                {{ v.user.name }} ({{ v.get_availability_status_display }}) - {{ v.user.phone }}
+                                {{ v.name }} ({{ v.get_availability_status_display }}) - {{ v.phone }}
                             </option>
                         {% endfor %}
                     </select>

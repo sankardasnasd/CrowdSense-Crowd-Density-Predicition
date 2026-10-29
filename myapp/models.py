@@ -22,7 +22,11 @@ class Area(models.Model):
     description = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
-
+class Location(models.Model):
+    date = models.DateField()
+    latitude = models.FloatField()
+    longitude = models.FloatField()
+    LOGIN = models.ForeignKey(User, on_delete=models.CASCADE)
 
 
 
@@ -182,7 +186,6 @@ class GroundReport(models.Model):
         EmergencyTask, on_delete=models.SET_NULL, null=True, blank=True, related_name='ground_reports'
     )
     volunteer = models.ForeignKey(VolunteerProfile, on_delete=models.CASCADE, related_name='reports')
-    alert = models.ForeignKey(EmergencyAlert, on_delete=models.CASCADE, related_name='ground_reports')
     situation_update = models.TextField()
     attached_image = models.ImageField(upload_to='ground_reports/', null=True, blank=True)
     reported_at = models.DateTimeField(auto_now_add=True)

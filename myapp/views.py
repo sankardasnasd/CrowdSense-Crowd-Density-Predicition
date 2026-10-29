@@ -1158,6 +1158,168 @@ def department_home(request):
 
 
 
+
+def dept_manage_instructions(request):
+    dept = get_object_or_404(
+        EmergencyDepartment.objects.prefetch_related('assigned_areas'),
+        LOGIN_id=request.user.id
+    )
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'add_instruction':
+            title = request.POST.get('title', '').strip()
+            instruction_type = request.POST.get('instruction_type', 'GENERAL_ADVISORY').strip()
+            severity_level = request.POST.get('severity_level', 'MEDIUM').strip()
+            summary = request.POST.get('summary', '').strip()
+            detailed_steps = request.POST.get('detailed_steps', '').strip()
+            do_list = request.POST.get('do_list', '').strip()
+            dont_list = request.POST.get('dont_list', '').strip()
+
+            if not title or not summary or not detailed_steps:
+                messages.error(request, 'Please complete the title, summary, and detailed protocol steps.')
+            else:
+                EmergencyInstruction.objects.create(
+                    emergency_department=dept,
+                    title=title,
+                    instruction_type=instruction_type,
+                    severity_level=severity_level,
+                    summary=summary,
+                    detailed_steps=detailed_steps,
+                    do_list=do_list or None,
+                    dont_list=dont_list or None,
+                )
+                messages.success(request, f'Tactical SOP "{title}" published successfully.')
+                return redirect('/myapp/dept_manage_instructions/')
+
+    severity_filter = request.GET.get('severity', '').strip()
+    type_filter = request.GET.get('type', '').strip()
+    search_query = request.GET.get('search', '').strip()
+
+    instructions = EmergencyInstruction.objects.filter(
+        emergency_department=dept
+    ).order_by('-created_at')
+
+    if severity_filter:
+        instructions = instructions.filter(severity_level=severity_filter)
+    if type_filter:
+        instructions = instructions.filter(instruction_type=type_filter)
+    if search_query:
+        instructions = instructions.filter(
+            Q(title__icontains=search_query) |
+            Q(summary__icontains=search_query) |
+            Q(detailed_steps__icontains=search_query)
+        )
+
+    total_count = EmergencyInstruction.objects.filter(emergency_department=dept).count()
+    critical_count = EmergencyInstruction.objects.filter(emergency_department=dept, severity_level='CRITICAL').count()
+    high_count = EmergencyInstruction.objects.filter(emergency_department=dept, severity_level='HIGH').count()
+
+    context = {
+        'dept': dept,
+        'instructions': instructions,
+        'total_count': total_count,
+        'critical_count': critical_count,
+        'high_count': high_count,
+        'severity_filter': severity_filter,
+        'type_filter': type_filter,
+        'search_query': search_query,
+    }
+    return render(request, 'dept/dept_manage_instructions.html', context)
+
+
+def dept_delete_instruction(request, instruction_id):
+    dept = get_object_or_404(EmergencyDepartment, LOGIN_id=request.user.id)
+    instruction = get_object_or_404(EmergencyInstruction, id=instruction_id, emergency_department=dept)
+
+    if request.method == 'POST':
+        title = instruction.title
+        instruction.delete()
+        messages.success(request, f'Directive "{title}" was permanently purged.')
+
+    return redirect('/myapp/dept_manage_instructions/')
+
+
+
+def dept_view_user_reports(request):
+    dept = get_object_or_404(
+        EmergencyDepartment.objects.prefetch_related('assigned_areas'),
+        LOGIN_id=request.user.id
+    )
+
+    assigned_areas = dept.assigned_areas.all()
+
+    status_filter = request.GET.get('status', '').strip()
+    area_filter = request.GET.get('area', '').strip()
+    search_query = request.GET.get('search', '').strip()
+    date_filter = request.GET.get('date', '').strip()
+
+    reports_qs = Report_Emergency.objects.filter(
+        USER__area__in=assigned_areas
+    ).select_related('USER', 'USER__area').order_by('-created_at')
+
+    if status_filter:
+        reports_qs = reports_qs.filter(status=status_filter)
+    if area_filter:
+        reports_qs = reports_qs.filter(USER__area_id=area_filter)
+    if date_filter:
+        d = parse_date(date_filter)
+        if d:
+            reports_qs = reports_qs.filter(created_at__date=d)
+    if search_query:
+        reports_qs = reports_qs.filter(
+            Q(title__icontains=search_query) |
+            Q(description__icontains=search_query) |
+            Q(USER__name__icontains=search_query) |
+            Q(USER__phone__icontains=search_query)
+        )
+
+    base_dept_reports = Report_Emergency.objects.filter(USER__area__in=assigned_areas)
+    total_reports = base_dept_reports.count()
+    active_reports = base_dept_reports.filter(status='ACTIVE').count()
+    under_control_reports = base_dept_reports.filter(status='UNDER_CONTROL').count()
+    resolved_reports = base_dept_reports.filter(status='RESOLVED').count()
+
+    context = {
+        'dept': dept,
+        'assigned_areas': assigned_areas,
+        'reports': reports_qs[:100],
+        'total_reports': total_reports,
+        'active_reports': active_reports,
+        'under_control_reports': under_control_reports,
+        'resolved_reports': resolved_reports,
+        'status_filter': status_filter,
+        'area_filter': area_filter,
+        'search_query': search_query,
+        'date_filter': date_filter,
+    }
+    return render(request, 'dept/dept_view_user_reports.html', context)
+
+
+def dept_update_user_report_status(request, report_id):
+    dept = get_object_or_404(EmergencyDepartment, LOGIN_id=request.user.id)
+    assigned_areas = dept.assigned_areas.all()
+
+    report = get_object_or_404(
+        Report_Emergency,
+        id=report_id,
+        USER__area__in=assigned_areas
+    )
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'acknowledge':
+            report.status = 'UNDER_CONTROL'
+            report.save()
+            messages.success(request, f'Incident reported by {report.USER.name} acknowledged and placed under control.')
+        elif action == 'resolve':
+            report.status = 'RESOLVED'
+            report.save()
+            messages.success(request, f'Incident reported by {report.USER.name} marked as resolved.')
+
+    return redirect('/myapp/dept_view_user_reports/')
+
 @login_required
 def dept_view_profile(request):
     dept = get_object_or_404(
@@ -1885,7 +2047,11 @@ def dept_previous_incidents(request):
 
 
 
-@login_required
+from django.shortcuts import render, get_object_or_404
+from django.db.models import Q, Count
+from django.utils.dateparse import parse_date
+from .models import EmergencyDepartment, EmergencyTask, EmergencyAlert, GroundReport
+
 def dept_monitor_volunteer_response(request):
     dept = get_object_or_404(
         EmergencyDepartment.objects.prefetch_related('assigned_areas'),
@@ -1897,14 +2063,16 @@ def dept_monitor_volunteer_response(request):
     search_query = request.GET.get('search', '').strip()
     date_filter = request.GET.get('date', '').strip()
 
-    tasks = EmergencyTask.objects.filter(
-        department=dept
-    ).select_related(
+    # 1. Base Queryset for Tasks
+    dept_tasks_qs = EmergencyTask.objects.filter(department=dept)
+
+    tasks = dept_tasks_qs.select_related(
         'alert', 'alert__area', 'volunteer'
     ).prefetch_related(
         'ground_reports'
     ).order_by('-assigned_at')
 
+    # 2. Filters
     if status_filter:
         tasks = tasks.filter(status=status_filter)
     if alert_filter:
@@ -1921,16 +2089,23 @@ def dept_monitor_volunteer_response(request):
         if d:
             tasks = tasks.filter(assigned_at__date=d)
 
-    total_tasks = EmergencyTask.objects.filter(department=dept).count()
-    pending_tasks = EmergencyTask.objects.filter(department=dept, status='PENDING').count()
-    active_deployments = EmergencyTask.objects.filter(department=dept, status__in=['ACCEPTED', 'IN_PROGRESS']).count()
-    completed_tasks = EmergencyTask.objects.filter(department=dept, status='COMPLETED').count()
-    declined_tasks = EmergencyTask.objects.filter(department=dept, status='DECLINED').count()
+    # 3. Optimized Counts (Single Query with Aggregate)
+    task_counts = dept_tasks_qs.aggregate(
+        total=Count('id'),
+        pending=Count('id', filter=Q(status='PENDING')),
+        active=Count('id', filter=Q(status__in=['ACCEPTED', 'IN_PROGRESS'])),
+        completed=Count('id', filter=Q(status='COMPLETED')),
+        declined=Count('id', filter=Q(status='DECLINED')),
+    )
 
+    # 4. Recent Reports (task__department വഴിയാണ് ഫിൽട്ടർ ചെയ്യേണ്ടത്)
     recent_reports = GroundReport.objects.filter(
-        alert__emergency_department=dept
-    ).select_related('task', 'volunteer', 'alert', 'alert__area').order_by('-reported_at')[:10]
+        task__department=dept
+    ).select_related(
+        'task', 'volunteer', 'task__alert', 'task__alert__area'
+    ).order_by('-reported_at')[:10]
 
+    # 5. Department Alerts
     department_alerts = EmergencyAlert.objects.filter(
         Q(emergency_department=dept) | Q(area__in=dept.assigned_areas.all())
     ).distinct().order_by('-created_at')
@@ -1940,11 +2115,11 @@ def dept_monitor_volunteer_response(request):
         'tasks': tasks[:100],
         'recent_reports': recent_reports,
         'department_alerts': department_alerts,
-        'total_tasks': total_tasks,
-        'pending_tasks': pending_tasks,
-        'active_deployments': active_deployments,
-        'completed_tasks': completed_tasks,
-        'declined_tasks': declined_tasks,
+        'total_tasks': task_counts['total'],
+        'pending_tasks': task_counts['pending'],
+        'active_deployments': task_counts['active'],
+        'completed_tasks': task_counts['completed'],
+        'declined_tasks': task_counts['declined'],
         'status_filter': status_filter,
         'alert_filter': alert_filter,
         'search_query': search_query,
@@ -1975,34 +2150,38 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
 
+from django.contrib.auth import authenticate, login
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+
+
 @csrf_exempt
 def app_login(request):
 
+    # Check POST method
     if request.method != "POST":
         return JsonResponse({
             "status": "error",
             "message": "POST method required"
         }, status=405)
 
+    # Get username and password
     username = request.POST.get("username", "").strip()
     password = request.POST.get("password", "")
 
-    print("Received username:", repr(username))
-    print("Received password length:", len(password))
-
+    # Validate input
     if not username or not password:
         return JsonResponse({
             "status": "error",
             "message": "Username and password are required"
         }, status=400)
 
+    # Authenticate user
     user = authenticate(
         request,
         username=username,
         password=password
     )
-
-    print("Authenticated user:", user)
 
     # Check authentication
     if user is None:
@@ -2011,36 +2190,41 @@ def app_login(request):
             "message": "Invalid username or password"
         }, status=401)
 
-    # Debug information
-    print("Authenticated username:", user.username)
-    print("Authenticated user ID:", user.id)
-    print(
-        "Authenticated user's groups:",
-        list(user.groups.values_list("name", flat=True))
-    )
-
     # Check Users group
-    is_users_group = user.groups.filter(name="Users").exists()
+    is_users_group = user.groups.filter(
+        name="Users"
+    ).exists()
 
-    print("Users group exists:", is_users_group)
+    # Check Volunteer group
+    is_volunteer_group = user.groups.filter(
+        name="Volunteer"
+    ).exists()
 
-    if not is_users_group:
+    # Assign user type
+    if is_users_group:
+        user_type = "Users"
+
+    elif is_volunteer_group:
+        user_type = "Volunteer"
+
+    else:
         return JsonResponse({
             "status": "error",
-            "message": "User is not assigned to the Users group"
+            "message": "User is not assigned to Users or Volunteer group"
         }, status=403)
 
-    # Login success
     login(request, user)
 
     return JsonResponse({
         "status": "ok",
+        "message": "Login successful",
         "lid": str(user.id),
-        "type": "Users"
+        "username": user.username,
+        "type": user_type
     }, status=200)
 
 
-
+@csrf_exempt
 
 def user_view_area(request):
     l=[]
@@ -2063,6 +2247,7 @@ def user_view_area(request):
     print(l,'data====')
     return JsonResponse({'status':'ok','data':l})
 
+@csrf_exempt
 
 def user_register(request):
     name = request.POST['area']
@@ -2104,6 +2289,7 @@ def user_register(request):
     return JsonResponse({'status': 'ok'})
 
 
+@csrf_exempt
 
 def user_change_password(request):
     id = request.POST['lid']
@@ -2535,6 +2721,914 @@ def user_view_crowd_density(request):
 
 
 
+@csrf_exempt
+def user_view_all_crowd_status(request):
+    if request.method != 'POST':
+        return JsonResponse({'status': 'no', 'message': 'Invalid request method'}, status=405)
+
+    lid = request.POST.get('lid')
+
+    try:
+        user_assigned_area_id = None
+        if lid:
+            user_profile = User_Table.objects.select_related('area').filter(LOGIN_id=lid).first()
+            if user_profile and user_profile.area:
+                user_assigned_area_id = user_profile.area.id
+
+        areas = Area.objects.all().order_by('name')
+        area_data_list = []
+
+        for area in areas:
+            cameras = CCTVCamera.objects.filter(area=area)
+            total_current_crowd = 0
+            camera_details = []
+
+            for cam in cameras:
+                latest_log = cam.density_logs.order_by('-recorded_at').first()
+
+                if latest_log:
+                    cam_count = latest_log.estimated_crowd_count
+                    total_current_crowd += cam_count
+                    cam_status = latest_log.status
+                    image_url = request.build_absolute_uri(
+                        latest_log.density_map_image.url) if latest_log.density_map_image else ''
+                    recorded_at = latest_log.recorded_at.strftime('%I:%M %p, %d %b %Y')
+                else:
+                    cam_count = 0
+                    cam_status = 'OFFLINE'
+                    image_url = ''
+                    recorded_at = 'No updates'
+
+                camera_details.append({
+                    'camera_id': cam.id,
+                    'identifier': cam.camera_identifier,
+                    'location': cam.location_details,
+                    'crowd_count': cam_count,
+                    'status': cam_status,
+                    'heatmap_url': image_url,
+                    'last_updated': recorded_at,
+                })
+
+            max_capacity = area.max_crowd_capacity if area.max_crowd_capacity > 0 else 1
+            load_percentage = min(round((total_current_crowd / max_capacity) * 100, 1), 100.0)
+
+            area_data_list.append({
+                'id': area.id,
+                'name': area.name,
+                'city': area.city,
+                'district': area.district,
+                'risk_level': area.current_risk_level,
+                'max_capacity': area.max_crowd_capacity,
+                'current_total_crowd': total_current_crowd,
+                'load_percentage': load_percentage,
+                'cameras_count': cameras.count(),
+                'is_my_area': (area.id == user_assigned_area_id),
+                'cameras': camera_details,
+            })
+
+        if user_assigned_area_id:
+            area_data_list.sort(key=lambda x: not x['is_my_area'])
+
+        return JsonResponse({
+            'status': 'ok',
+            'total_areas': len(area_data_list),
+            'data': area_data_list
+        })
+
+    except Exception as e:
+        return JsonResponse({'status': 'no', 'message': f'Server error: {str(e)}'})
+
+@csrf_exempt
+def user_view_area_risk_level(request):
+    if request.method != 'POST':
+        return JsonResponse({'status': 'no', 'message': 'Invalid request method'}, status=405)
+
+    lid = request.POST.get('lid')
+
+    try:
+        user_assigned_area_id = None
+        if lid:
+            user_profile = User_Table.objects.select_related('area').filter(LOGIN_id=lid).first()
+            if user_profile and user_profile.area:
+                user_assigned_area_id = user_profile.area.id
+
+        areas = Area.objects.all().order_by('name')
+        area_risk_data = []
+
+        for area in areas:
+            # 1. Fetch active emergency alerts for this sector
+            active_alerts = EmergencyAlert.objects.filter(
+                area=area,
+                status='ACTIVE'
+            ).order_by('-created_at')
+
+            alert_list = []
+            for alert in active_alerts:
+                alert_list.append({
+                    'id': alert.id,
+                    'title': alert.title,
+                    'severity': alert.severity,
+                    'description': alert.description,
+                    'public_instructions': alert.public_instructions,
+                    'department': alert.emergency_department.name if alert.emergency_department else 'Sector Security Control',
+                    'updated_at': alert.updated_at.strftime('%I:%M %p, %d %b %Y'),
+                })
+
+            # 2. Fetch latest critical anomalies detected across area cameras
+            area_cameras = CCTVCamera.objects.filter(area=area)
+            recent_anomalies = AnomalyDetectionLog.objects.filter(
+                camera__in=area_cameras
+            ).select_related('camera').order_by('-detected_at')[:3]
+
+            anomaly_list = []
+            for anom in recent_anomalies:
+                snapshot_url = request.build_absolute_uri(anom.frame_snapshot.url) if anom.frame_snapshot else ''
+                clip_url = request.build_absolute_uri(anom.video_clip.url) if anom.video_clip else ''
+                anomaly_list.append({
+                    'id': anom.id,
+                    'camera_identifier': anom.camera.camera_identifier,
+                    'location': anom.camera.location_details,
+                    'type': anom.get_anomaly_type_display(),
+                    'raw_type': anom.anomaly_type,
+                    'confidence': round(anom.confidence_score * 100, 1),
+                    'frame_snapshot': snapshot_url,
+                    'video_clip': clip_url,
+                    'detected_at': anom.detected_at.strftime('%I:%M %p, %d %b'),
+                })
+
+            area_risk_data.append({
+                'id': area.id,
+                'name': area.name,
+                'city': area.city,
+                'district': area.district,
+                'risk_level': area.current_risk_level,
+                'is_my_area': (area.id == user_assigned_area_id),
+                'active_alerts_count': len(alert_list),
+                'alerts': alert_list,
+                'recent_anomalies': anomaly_list,
+            })
+
+        # Rank user's assigned area first, then critical/high risks
+        if user_assigned_area_id:
+            area_risk_data.sort(key=lambda x: not x['is_my_area'])
+
+        return JsonResponse({
+            'status': 'ok',
+            'areas': area_risk_data,
+        })
+
+    except Exception as e:
+        return JsonResponse({'status': 'no', 'message': f'Server error: {str(e)}'})
+
+
+
+# volunteer module
+
+
+
+
+@csrf_exempt
+def updatelocation(request):
+
+    if request.method != "POST":
+        return JsonResponse({
+            "status": "error",
+            "message": "POST method required"
+        }, status=405)
+
+    lid = request.POST.get("lid", "").strip()
+    lat = request.POST.get("latitude", "").strip()
+    lon = request.POST.get("longitude", "").strip()
+
+    # Validate input
+    if not lid or not lat or not lon:
+        return JsonResponse({
+            "status": "error",
+            "message": "lid, latitude and longitude are required"
+        }, status=400)
+
+    try:
+        user_id = int(lid)
+        latitude = float(lat)
+        longitude = float(lon)
+    except (ValueError, TypeError):
+        return JsonResponse({
+            "status": "error",
+            "message": "Invalid user ID or coordinates"
+        }, status=400)
+
+    # Validate latitude
+    if not -90 <= latitude <= 90:
+        return JsonResponse({
+            "status": "error",
+            "message": "Invalid latitude"
+        }, status=400)
+
+    # Validate longitude
+    if not -180 <= longitude <= 180:
+        return JsonResponse({
+            "status": "error",
+            "message": "Invalid longitude"
+        }, status=400)
+
+    # Find user
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return JsonResponse({
+            "status": "error",
+            "message": "User not found"
+        }, status=404)
+
+    # Find volunteer profile
+    try:
+        volunteer = VolunteerProfile.objects.get(LOGIN=user)
+    except VolunteerProfile.DoesNotExist:
+        return JsonResponse({
+            "status": "error",
+            "message": "Volunteer profile not found"
+        }, status=404)
+
+    # Update latitude and longitude
+    volunteer.latitude = latitude
+    volunteer.longitude = longitude
+    volunteer.save(update_fields=["latitude", "longitude"])
+
+    return JsonResponse({
+        "status": "ok",
+        "message": "Volunteer location updated successfully",
+        "lid": str(user.id),
+        "latitude": float(volunteer.latitude),
+        "longitude": float(volunteer.longitude)
+    }, status=200)
+
+
+@csrf_exempt
+def volunteer_view_profile(request):
+    lid = request.POST.get('lid')
+
+
+    profile = VolunteerProfile.objects.select_related('emergency_department').get(LOGIN_id=lid)
+
+    # Assigned area details extraction from EmergencyDepartment
+    dept_name = "Not Assigned"
+    dept_contact = "N/A"
+    assigned_area_names = []
+
+    if profile.emergency_department:
+        dept_name = profile.emergency_department.department_name
+        dept_contact = profile.emergency_department.contact_number
+        assigned_area_names = list(
+            profile.emergency_department.assigned_areas.values_list('name', flat=True)
+        )
+
+    photo_url = request.build_absolute_uri(profile.photo.url) if profile.photo else ''
+    id_proof_url = request.build_absolute_uri(profile.id_proof.url) if profile.id_proof else ''
+
+    data = {
+        'id': profile.id,
+        'name': profile.name,
+        'email': profile.email,
+        'phone': profile.phone,
+        'place': profile.place,
+        'photo': photo_url,
+        'id_proof': id_proof_url,
+        'approval_status': profile.approval_status,
+        'availability_status': profile.availability_status,
+        'join_at': profile.join_at.strftime('%Y-%m-%d %H:%M') if profile.join_at else 'N/A',
+        'latitude': str(profile.latitude) if profile.latitude else None,
+        'longitude': str(profile.longitude) if profile.longitude else None,
+        'department_name': dept_name,
+        'department_contact': dept_contact,
+        'assigned_areas': assigned_area_names,
+    }
+
+    return JsonResponse({'status': 'ok', 'data': data})
+
+
+
+
+@csrf_exempt
+def update_volunteer_profile_place(request):
+    if request.method == 'POST':
+        lid = request.POST.get('lid')
+        place = request.POST.get('place')
+        lat = request.POST.get('latitude')
+        lon = request.POST.get('longitude')
+
+        if not lid or not place:
+            return JsonResponse({'status': 'error', 'message': 'Missing lid or place data'}, status=400)
+
+        try:
+            profile = VolunteerProfile.objects.get(LOGIN_id=lid)
+            profile.place = place
+            if lat:
+                profile.latitude = float(lat)
+            if lon:
+                profile.longitude = float(lon)
+            profile.save(update_fields=['place', 'latitude', 'longitude'])
+
+            return JsonResponse({'status': 'ok', 'message': 'Place updated successfully', 'place': profile.place})
+        except VolunteerProfile.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Volunteer profile not found'}, status=404)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
+@csrf_exempt
+
+def volunteer_change_password(request):
+    id = request.POST['lid']
+    current_password = request.POST['old_password']
+    new_password = request.POST['new_password']
+    confirm_password = request.POST['confirm_password']
+    res = User.objects.get(id=id)
+    if res.check_password(current_password):
+        if new_password == confirm_password:
+            res.set_password(new_password)
+            res.save()
+            return JsonResponse({'status': 'ok'})
+        else:
+            return JsonResponse({'status': 'no'})
+    else:
+        return JsonResponse({'status': 'no'})
+
+
+@csrf_exempt
+def volunteer_view_assigned_department(request):
+    if request.method == 'POST':
+        lid = request.POST.get('lid')
+        if not lid:
+            return JsonResponse({'status': 'error', 'message': 'Missing user identifier (lid)'}, status=400)
+
+        try:
+            profile = VolunteerProfile.objects.select_related('emergency_department').get(LOGIN_id=lid)
+            dept = profile.emergency_department
+
+            if not dept:
+                return JsonResponse({
+                    'status': 'no_dept',
+                    'message': 'No Emergency Department has been assigned yet.'
+                })
+
+            # Assigned Areas listing
+            areas_data = []
+            for area in dept.assigned_areas.all():
+                areas_data.append({
+                    'id': area.id,
+                    'name': area.name,
+                    'city': area.city,
+                    'district': area.district,
+                    'state': area.state,
+                    'pincode': area.pincode,
+                    'latitude': str(area.latitude) if area.latitude else None,
+                    'longitude': str(area.longitude) if area.longitude else None,
+                    'max_crowd_capacity': area.max_crowd_capacity,
+                    'current_risk_level': area.current_risk_level,
+                    'description': area.description or '',
+                })
+
+            data = {
+                'department_name': dept.department_name,
+                'department_code': dept.department_code,
+                'contact_number': dept.contact_number,
+                'helpline_number': dept.helpline_number,
+                'department_email': dept.department_email,
+                'office_address': dept.office_address,
+                'is_active': dept.is_active,
+                'volunteer_name': profile.name,
+                'assigned_areas': areas_data,
+            }
+
+            return JsonResponse({'status': 'ok', 'data': data})
+
+        except VolunteerProfile.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Volunteer profile not found.'}, status=404)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method.'}, status=405)
+
+
+
+
+@csrf_exempt
+def volunteer_view_emergency_alerts(request):
+    if request.method == 'POST':
+        lid = request.POST.get('lid')
+        status_filter = request.POST.get('status', 'ALL')  # ALL, ACTIVE, UNDER_CONTROL, RESOLVED
+
+        if not lid:
+            return JsonResponse({'status': 'error', 'message': 'Missing user identifier (lid)'}, status=400)
+
+        try:
+            profile = VolunteerProfile.objects.select_related('emergency_department').get(LOGIN_id=lid)
+            dept = profile.emergency_department
+
+            alerts_qs = EmergencyAlert.objects.select_related('area', 'emergency_department').all()
+
+            if dept:
+                assigned_areas = dept.assigned_areas.all()
+                alerts_qs = alerts_qs.filter(area__in=assigned_areas)
+
+            if status_filter.upper() != 'ALL':
+                alerts_qs = alerts_qs.filter(status=status_filter.upper())
+
+            alerts_qs = alerts_qs.order_by('-created_at')
+
+            alerts_list = []
+            for alert in alerts_qs:
+                alerts_list.append({
+                    'id': alert.id,
+                    'title': alert.title,
+                    'severity': alert.severity,
+                    'status': alert.status,
+                    'area_name': alert.area.name if alert.area else 'Sector Unknown',
+                    'city': alert.area.city if alert.area else '',
+                    'current_risk_level': alert.area.current_risk_level if alert.area else 'MODERATE',
+                    'department_name': alert.emergency_department.department_name if alert.emergency_department else (dept.department_name if dept else 'Central Command'),
+                    'description': alert.description,
+                    'public_instructions': alert.public_instructions,
+                    'created_at': alert.created_at.strftime('%d %b %Y, %I:%M %p') if alert.created_at else 'Just now',
+                    'updated_at': alert.updated_at.strftime('%d %b %Y, %I:%M %p') if alert.updated_at else '',
+                })
+
+            return JsonResponse({
+                'status': 'ok',
+                'active_count': alerts_qs.filter(status='ACTIVE').count(),
+                'data': alerts_list
+            })
+
+        except VolunteerProfile.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Volunteer profile not found'}, status=404)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
+
+
+
+@csrf_exempt
+def volunteer_view_tasks(request):
+    if request.method == 'POST':
+        lid = request.POST.get('lid')
+        status_filter = request.POST.get('status', 'ALL')
+
+        if not lid:
+            return JsonResponse({'status': 'error', 'message': 'Missing user identifier (lid)'}, status=400)
+
+        try:
+            profile = VolunteerProfile.objects.get(LOGIN_id=lid)
+            tasks_qs = EmergencyTask.objects.select_related('alert', 'department', 'alert__area').filter(volunteer=profile)
+
+            if status_filter.upper() != 'ALL':
+                tasks_qs = tasks_qs.filter(status=status_filter.upper())
+
+            tasks_qs = tasks_qs.order_by('-assigned_at')
+
+            tasks_list = []
+            for task in tasks_qs:
+                tasks_list.append({
+                    'id': task.id,
+                    'title': task.title,
+                    'instruction': task.instruction,
+                    'status': task.status,
+                    'alert_title': task.alert.title if task.alert else 'General Incident',
+                    'alert_severity': task.alert.severity if task.alert else 'MEDIUM',
+                    'area_name': task.alert.area.name if (task.alert and task.alert.area) else 'Field Checkpoint',
+                    'department_name': task.department.department_name if task.department else 'Central Command',
+                    'assigned_at': task.assigned_at.strftime('%d %b %Y, %I:%M %p') if task.assigned_at else '',
+                    'responded_at': task.responded_at.strftime('%d %b %Y, %I:%M %p') if task.responded_at else None,
+                    'completed_at': task.completed_at.strftime('%d %b %Y, %I:%M %p') if task.completed_at else None,
+                })
+
+            return JsonResponse({
+                'status': 'ok',
+                'pending_count': tasks_qs.filter(status='PENDING').count(),
+                'data': tasks_list
+            })
+
+        except VolunteerProfile.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Volunteer profile not found.'}, status=404)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method.'}, status=405)
+
+
+
+@csrf_exempt
+def volunteer_update_task_status(request):
+    if request.method == 'POST':
+        lid = request.POST.get('lid')
+        task_id = request.POST.get('task_id')
+        new_status = request.POST.get('status')  # ACCEPTED, DECLINED, IN_PROGRESS, COMPLETED
+
+        valid_statuses = ['ACCEPTED', 'DECLINED', 'IN_PROGRESS', 'COMPLETED']
+
+        if not lid or not task_id or not new_status:
+            return JsonResponse({'status': 'error', 'message': 'lid, task_id, and status are required.'}, status=400)
+
+        if new_status.upper() not in valid_statuses:
+            return JsonResponse({'status': 'error', 'message': 'Invalid status choice.'}, status=400)
+
+        try:
+            profile = VolunteerProfile.objects.get(LOGIN_id=lid)
+            task = EmergencyTask.objects.get(id=int(task_id), volunteer=profile)
+
+            status_upper = new_status.upper()
+            task.status = status_upper
+
+            if status_upper in ['ACCEPTED', 'DECLINED']:
+                task.responded_at = timezone.now()
+            elif status_upper == 'COMPLETED':
+                task.completed_at = timezone.now()
+
+            task.save()
+
+            return JsonResponse({
+                'status': 'ok',
+                'message': f'Task status updated to {status_upper}',
+                'updated_status': task.status
+            })
+
+        except VolunteerProfile.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Volunteer profile not found.'}, status=404)
+        except EmergencyTask.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Task not found or unauthorized.'}, status=404)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method.'}, status=405)
+
+
+
+
+
+@csrf_exempt
+def volunteer_view_emergency_instructions(request):
+    if request.method == 'POST':
+        lid = request.POST.get('lid')
+        search_query = request.POST.get('search', '').strip()
+        severity_filter = request.POST.get('severity', 'ALL')
+
+        try:
+            profile = None
+            if lid:
+                profile = VolunteerProfile.objects.select_related('emergency_department').filter(LOGIN_id=lid).first()
+
+            instructions_qs = EmergencyInstruction.objects.select_related('emergency_department').all()
+
+            if profile and profile.emergency_department:
+                instructions_qs = instructions_qs.filter(
+                    emergency_department__in=[profile.emergency_department, None]
+                )
+
+            if severity_filter.upper() != 'ALL':
+                instructions_qs = instructions_qs.filter(severity_level=severity_filter.upper())
+
+            if search_query:
+                instructions_qs = instructions_qs.filter(title__icontains=search_query)
+
+            instructions_qs = instructions_qs.order_by('-created_at')
+
+            instructions_list = []
+            for item in instructions_qs:
+                instructions_list.append({
+                    'id': item.id,
+                    'title': item.title,
+                    'instruction_type': item.instruction_type,
+                    'severity_level': item.severity_level,
+                    'department_name': item.emergency_department.department_name if item.emergency_department else 'Central Command / Standard SOP',
+                    'summary': item.summary,
+                    'detailed_steps': item.detailed_steps,
+                    'do_list': item.do_list or '',
+                    'dont_list': item.dont_list or '',
+                    'created_at': item.created_at.strftime('%d %b %Y, %I:%M %p') if item.created_at else '',
+                })
+
+            return JsonResponse({
+                'status': 'ok',
+                'count': len(instructions_list),
+                'data': instructions_list
+            })
+
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method.'}, status=405)
+
+
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
+from .models import VolunteerProfile, GroundReport, EmergencyTask
+
+
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
+from .models import VolunteerProfile, GroundReport, EmergencyTask
+
+# -------------------------------------------------------------------------
+# 1. GET TODAY'S TASKS FOR FORM DROPDOWN
+# -------------------------------------------------------------------------
+@csrf_exempt
+def get_volunteer_tasks_dropdown(request):
+    if request.method == 'POST':
+        lid = request.POST.get('lid')
+        if not lid:
+            return JsonResponse({'status': 'error', 'message': 'Missing lid'}, status=400)
+
+        try:
+            profile = VolunteerProfile.objects.get(LOGIN_id=lid)
+            today = timezone.localdate()
+
+            # ഇന്നത്തെ തീയതിയിലെ ടാസ്കുകൾ മാത്രം ഫിൽട്ടർ ചെയ്യുന്നു
+            tasks = EmergencyTask.objects.filter(
+                volunteer=profile,
+                assigned_at__date=today
+            ).order_by('-assigned_at')
+
+            task_list = []
+            for t in tasks:
+                task_list.append({
+                    'id': t.id,
+                    'title': t.title,
+                    'instruction': t.instruction,
+                    'status': t.status,
+                })
+
+            return JsonResponse({'status': 'ok', 'tasks': task_list})
+
+        except VolunteerProfile.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Volunteer profile not found'}, status=404)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
+
+
+# -------------------------------------------------------------------------
+# 2. VIEW ALL SUBMITTED GROUND REPORTS
+# -------------------------------------------------------------------------
+@csrf_exempt
+def volunteer_view_ground_reports(request):
+    if request.method == 'POST':
+        lid = request.POST.get('lid')
+        if not lid:
+            return JsonResponse({'status': 'error', 'message': 'Missing lid'}, status=400)
+
+        try:
+            profile = VolunteerProfile.objects.get(LOGIN_id=lid)
+            reports_qs = GroundReport.objects.select_related('task').filter(volunteer=profile).order_by('-reported_at')
+
+            reports_list = []
+            for report in reports_qs:
+                img_url = request.build_absolute_uri(report.attached_image.url) if report.attached_image else ''
+                reports_list.append({
+                    'id': report.id,
+                    'task_id': report.task_id,
+                    'task_title': report.task.title if report.task else 'General Task',
+                    'situation_update': report.situation_update,
+                    'attached_image': img_url,
+                    'reported_at': report.reported_at.strftime('%d %b %Y, %I:%M %p') if report.reported_at else '',
+                })
+
+            return JsonResponse({'status': 'ok', 'data': reports_list})
+
+        except VolunteerProfile.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Volunteer profile not found'}, status=404)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
+
+
+# -------------------------------------------------------------------------
+# 3. ADD GROUND REPORT FOR SELECTED DROPDOWN TASK
+# -------------------------------------------------------------------------
+@csrf_exempt
+def volunteer_add_ground_report(request):
+    if request.method == 'POST':
+        lid = request.POST.get('lid')
+        task_id = request.POST.get('task_id')
+        situation_update = request.POST.get('situation_update', '').strip()
+        attached_image = request.FILES.get('attached_image')
+
+        if not lid or not task_id or not situation_update:
+            return JsonResponse({'status': 'error', 'message': 'lid, task_id, and situation update are required.'}, status=400)
+
+        try:
+            profile = VolunteerProfile.objects.get(LOGIN_id=lid)
+            task_instance = EmergencyTask.objects.get(id=int(task_id), volunteer=profile)
+
+            report = GroundReport.objects.create(
+                volunteer=profile,
+                task=task_instance,
+                situation_update=situation_update,
+                attached_image=attached_image
+            )
+
+            return JsonResponse({
+                'status': 'ok',
+                'message': 'Situation report submitted successfully.',
+                'report_id': report.id
+            })
+
+        except VolunteerProfile.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Volunteer profile not found.'}, status=404)
+        except EmergencyTask.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Task not found or unauthorized.'}, status=404)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
+
+
+# -------------------------------------------------------------------------
+# 4. DELETE GROUND REPORT
+# -------------------------------------------------------------------------
+@csrf_exempt
+def volunteer_delete_ground_report(request):
+    if request.method == 'POST':
+        lid = request.POST.get('lid')
+        report_id = request.POST.get('report_id')
+
+        if not lid or not report_id:
+            return JsonResponse({'status': 'error', 'message': 'Missing parameters'}, status=400)
+
+        try:
+            profile = VolunteerProfile.objects.get(LOGIN_id=lid)
+            report = GroundReport.objects.get(id=int(report_id), volunteer=profile)
+
+            if report.attached_image:
+                report.attached_image.delete(save=False)
+            report.delete()
+
+            return JsonResponse({'status': 'ok', 'message': 'Report removed successfully.'})
+
+        except VolunteerProfile.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Volunteer profile not found.'}, status=404)
+        except GroundReport.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Report not found or unauthorized.'}, status=404)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
+
+
+
+
+@csrf_exempt
+def volunteer_view_crowd_status(request):
+    if request.method == 'POST':
+        lid = request.POST.get('lid')
+        area_filter = request.POST.get('area_id', '').strip()
+
+        if not lid:
+            return JsonResponse({'status': 'error', 'message': 'Missing user identifier (lid)'}, status=400)
+
+        try:
+            profile = VolunteerProfile.objects.select_related('emergency_department').get(LOGIN_id=lid)
+            dept = profile.emergency_department
+
+            if dept:
+                areas_qs = dept.assigned_areas.all()
+            else:
+                areas_qs = Area.objects.all()
+
+            if area_filter and area_filter != 'ALL':
+                areas_qs = areas_qs.filter(id=int(area_filter))
+
+            areas_list = []
+            for area in areas_qs:
+                cameras = CCTVCamera.objects.filter(area=area)
+                camera_telemetry = []
+
+                area_total_live_crowd = 0
+
+                for cam in cameras:
+                    latest_density = cam.density_logs.order_by('-recorded_at').first()
+                    latest_anomaly = cam.anomaly_logs.order_by('-detected_at').first()
+
+                    crowd_count = latest_density.estimated_crowd_count if latest_density else 0
+                    area_total_live_crowd += crowd_count
+
+                    density_map_url = ''
+                    if latest_density and latest_density.density_map_image:
+                        density_map_url = request.build_absolute_uri(latest_density.density_map_image.url)
+
+                    anomaly_data = None
+                    if latest_anomaly:
+                        anomaly_frame = ''
+                        if latest_anomaly.frame_snapshot:
+                            anomaly_frame = request.build_absolute_uri(latest_anomaly.frame_snapshot.url)
+                        anomaly_data = {
+                            'type': latest_anomaly.get_anomaly_type_display(),
+                            'confidence': round(latest_anomaly.confidence_score * 100, 1),
+                            'frame': anomaly_frame,
+                            'detected_at': latest_anomaly.detected_at.strftime('%I:%M %p, %d %b') if latest_anomaly.detected_at else '',
+                        }
+
+                    camera_telemetry.append({
+                        'camera_id': cam.id,
+                        'camera_identifier': cam.camera_identifier,
+                        'location_details': cam.location_details,
+                        'latitude': str(cam.latitude) if cam.latitude else None,
+                        'longitude': str(cam.longitude) if cam.longitude else None,
+                        'crowd_count': crowd_count,
+                        'density_status': latest_density.status if latest_density else 'NORMAL',
+                        'density_map_url': density_map_url,
+                        'recorded_at': latest_density.recorded_at.strftime('%I:%M %p, %d %b') if latest_density and latest_density.recorded_at else 'Live Stream',
+                        'latest_anomaly': anomaly_data,
+                    })
+
+                capacity = area.max_crowd_capacity if area.max_crowd_capacity > 0 else 1
+                occupancy_rate = min(round((area_total_live_crowd / capacity) * 100, 1), 100.0)
+
+                areas_list.append({
+                    'area_id': area.id,
+                    'area_name': area.name,
+                    'city': area.city,
+                    'max_capacity': area.max_crowd_capacity,
+                    'current_risk_level': area.current_risk_level,
+                    'total_live_crowd': area_total_live_crowd,
+                    'occupancy_percentage': occupancy_rate,
+                    'cameras': camera_telemetry,
+                })
+
+            available_dropdown_areas = list(
+                dept.assigned_areas.values('id', 'name') if dept else Area.objects.values('id', 'name')
+            )
+
+            return JsonResponse({
+                'status': 'ok',
+                'areas_dropdown': available_dropdown_areas,
+                'data': areas_list
+            })
+
+        except VolunteerProfile.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Volunteer profile not found'}, status=404)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
+
+
+
+
+@csrf_exempt
+def volunteer_dashboard_data(request):
+    if request.method == 'POST':
+        lid = request.POST.get('lid')
+        try:
+            profile = VolunteerProfile.objects.select_related('emergency_department').get(LOGIN_id=lid)
+            dept = profile.emergency_department
+            today = timezone.localdate()
+
+            today_tasks_qs = EmergencyTask.objects.select_related('alert', 'alert__area').filter(
+                volunteer=profile,
+                assigned_at__date=today
+            ).order_by('-assigned_at')
+
+            tasks_list = []
+            for t in today_tasks_qs:
+                tasks_list.append({
+                    'id': t.id,
+                    'title': t.title,
+                    'location': t.alert.area.name if (t.alert and t.alert.area) else 'Field Checkpoint',
+                    'priority': t.alert.severity if t.alert else 'HIGH',
+                    'status': t.status,
+                    'instruction': t.instruction,
+                })
+
+            active_emergency = EmergencyAlert.objects.filter(status='ACTIVE').order_by('-created_at').first()
+            emergency_data = None
+            if active_emergency:
+                emergency_data = {
+                    'id': active_emergency.id,
+                    'title': active_emergency.title,
+                    'instructions': active_emergency.public_instructions,
+                    'severity': active_emergency.severity,
+                }
+
+            return JsonResponse({
+                'status': 'ok',
+                'name': profile.name,
+                'department': dept.department_name if dept else 'Command Unit',
+                'area': profile.area.name if hasattr(profile, 'area') and profile.area else 'Sector Assigned',
+                'risk_level': 'MODERATE',
+                'crowd_count': 120,
+                'max_capacity': 2000,
+                'active_emergency': emergency_data,
+                'tasks': tasks_list,
+            })
+        except VolunteerProfile.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Profile not found'}, status=404)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    return JsonResponse({'status': 'error', 'message': 'Invalid method'}, status=405)
 
 
 
@@ -2579,9 +3673,6 @@ from .models import (
 )
 
 
-# ---------------------------------------------------------
-# CONFIGURATION
-# ---------------------------------------------------------
 
 YOLO_MODEL_PATH = getattr(
     settings, "CROWD_YOLO_MODEL_PATH",
@@ -3248,9 +4339,7 @@ def camera_monitoring(request):
     )
 
 
-# ---------------------------------------------------------
-# LIVE CROWD PREDICTION API
-# ---------------------------------------------------------
+
 
 @require_POST
 @csrf_protect

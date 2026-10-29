@@ -152,7 +152,6 @@
                         <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Assigned Time</th>
                         <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Assigned Volunteer</th>
                         <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Emergency Incident & Task</th>
-                        <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Response Timestamps</th>
                         <th style="text-align: left; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Status</th>
                         <th style="text-align: right; font-weight: 600; color: var(--muted); font-size: 0.76rem; padding: 0.65rem 0.75rem; white-space: nowrap;">Ground Situation</th>
                     </tr>
@@ -201,24 +200,7 @@
                             </div>
                         </td>
 
-                        <!-- Response Timestamps -->
-                        <td style="padding: 0.85rem 0.75rem; vertical-align: top; white-space: nowrap;">
-                            {% if task.responded_at %}
-                                <div style="font-size: 0.78rem; color: var(--ink);">
-                                    Responded: <strong style="font-feature-settings: 'tnum';">{{ task.responded_at|date:"H:i" }}</strong>
-                                </div>
-                            {% else %}
-                                <div style="font-size: 0.76rem; color: var(--hot); font-style: italic;">
-                                    Awaiting Response
-                                </div>
-                            {% endif %}
 
-                            {% if task.completed_at %}
-                                <div style="font-size: 0.76rem; color: #0b6b57; margin-top: 0.2rem;">
-                                    Completed: <strong style="font-feature-settings: 'tnum';">{{ task.completed_at|date:"H:i" }}</strong>
-                                </div>
-                            {% endif %}
-                        </td>
 
                         <!-- Status Badge -->
                         <td style="padding: 0.85rem 0.75rem; vertical-align: top;">

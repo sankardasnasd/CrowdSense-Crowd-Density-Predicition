@@ -49,6 +49,12 @@ urlpatterns = [
 
 
     path('department_home/', views.department_home, name='department_home'),
+
+    path('dept_view_user_reports/', views.dept_view_user_reports, name='dept_view_user_reports'),
+    path('dept_update_user_report_status/<int:report_id>/', views.dept_update_user_report_status, name='dept_update_user_report_status'),
+
+    path('dept_manage_instructions/', views.dept_manage_instructions, name='dept_manage_instructions'),
+    path('dept_delete_instruction/<int:instruction_id>/', views.dept_delete_instruction, name='dept_delete_instruction'),
     path('dept_view_profile/', views.dept_view_profile, name='dept_view_profile'),
     path('dept_change_password/', views.dept_change_password, name='dept_change_password'),
     path('dept_view_areas/', views.dept_view_areas, name='dept_view_areas'),
@@ -99,8 +105,31 @@ urlpatterns = [
 
     path('user_view_emergency_instructions/', views.user_view_emergency_instructions, name='user_view_emergency_instructions'),
     path('user_view_crowd_density/', views.user_view_crowd_density, name='user_view_crowd_density'),
+    path('user_view_all_crowd_status/', views.user_view_all_crowd_status, name='user_view_all_crowd_status'),
+    path('user_view_area_risk_level/', views.user_view_area_risk_level, name='user_view_area_risk_level'),
+
+    # volunteeer=========================================================
+
+    path('updatelocation/', views.updatelocation, name='updatelocation'),
+    path('volunteer_view_profile/', views.volunteer_view_profile, name='volunteer_view_profile'),
+    path('update_volunteer_profile_place/', views.update_volunteer_profile_place, name='update_volunteer_profile_place'),
+    path('volunteer_change_password/', views.volunteer_change_password, name='volunteer_change_password'),
+    path('volunteer_view_assigned_department/', views.volunteer_view_assigned_department, name='volunteer_view_assigned_department'),
+    path('volunteer_view_emergency_alerts/', views.volunteer_view_emergency_alerts, name='volunteer_view_emergency_alerts'),
+    path('volunteer_view_tasks/', views.volunteer_view_tasks, name='volunteer_view_tasks'),
+    path('volunteer_update_task_status/', views.volunteer_update_task_status, name='volunteer_update_task_status'),
+    path('volunteer_view_emergency_instructions/', views.volunteer_view_emergency_instructions, name='volunteer_view_emergency_instructions'),
+    path('volunteer_view_ground_reports/', views.volunteer_view_ground_reports, name='volunteer_view_ground_reports'),
+    path('volunteer_add_ground_report/', views.volunteer_add_ground_report, name='volunteer_add_ground_report'),
+    path('volunteer_delete_ground_report/', views.volunteer_delete_ground_report, name='volunteer_delete_ground_report'),
+    path('get_volunteer_tasks_dropdown/', views.get_volunteer_tasks_dropdown, name='get_volunteer_tasks_dropdown'),
+    path('volunteer_view_crowd_status/', views.volunteer_view_crowd_status, name='volunteer_view_crowd_status'),
+    path('volunteer_dashboard_data/', views.volunteer_dashboard_data, name='volunteer_dashboard_data'),
+
 
     path('camera_monitoring/', views.camera_monitoring, name='camera_monitoring'),
     path("live_crowd_predict/",views.live_crowd_predict,name="live_crowd_predict",),
+
+
 
    ]
